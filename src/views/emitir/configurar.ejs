@@ -1,0 +1,101 @@
+<% const num = cfg.numeracao || {}; %>
+<form method="post" action="<%= base %>/emitir/configurar/<%= empresa._id %>" class="form">
+  <section class="card card-form">
+    <div class="card-head"><h2>Emissao de NFS-e pelo Emissor Nacional</h2></div>
+    <label class="check"><input type="checkbox" name="ativa" <%= cfg.ativa ? 'checked' : '' %> /> Ativar a emissao para <strong><%= empresa.razaoSocial %></strong></label>
+    <% if (!empresa.certificado) { %><p class="small"><span class="tag tag-err">sem certificado</span> Vincule um certificado A1 a empresa antes de ativar.</p><% } %>
+
+    <div class="form-row">
+      <label>Ambiente
+        <select name="ambiente">
+          <option value="homologacao" <%= cfg.ambiente !== 'producao' ? 'selected' : '' %>>Producao restrita (teste, sem valor fiscal)</option>
+          <option value="producao" <%= cfg.ambiente === 'producao' ? 'selected' : '' %>>Producao (notas validas)</option>
+        </select>
+      </label>
+      <label>Codigo IBGE do municipio do prestador
+        <input type="text" name="municipioCodigo" value="<%= empresa.municipioCodigo || '' %>" maxlength="7" inputmode="numeric" placeholder="7 digitos (ex.: 2927408)" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Regime tributario
+        <select name="opSimpNac" id="opSimpNac">
+          <% Object.entries(OP_SIMP_NAC).forEach(([k, nome]) => { %><option value="<%= k %>" <%= (cfg.opSimpNac || '1') === k ? 'selected' : '' %>><%= nome %></option><% }) %>
+        </select>
+      </label>
+      <label>Regime especial
+        <select name="regEspTrib">
+          <% [['0','Nenhum'],['1','Ato cooperado'],['2','Estimativa'],['3','Microempresa municipal'],['4','Notario ou registrador'],['5','Profissional autonomo'],['6','Sociedade de profissionais']].forEach(([k, n]) => { %>
+            <option value="<%= k %>" <%= (cfg.regEspTrib || '0') === k ? 'selected' : '' %>><%= n %></option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+
+    <div class="form-row so-simples">
+      <label>Apuracao no Simples (ME/EPP)
+        <select name="regApTribSN">
+          <option value="1" <%= (cfg.regApTribSN || '1') === '1' ? 'selected' : '' %>>Tributos federais e ISS pelo Simples</option>
+          <option value="2" <%= cfg.regApTribSN === '2' ? 'selected' : '' %>>Federais pelo Simples; ISS fora (NFS-e)</option>
+          <option value="3" <%= cfg.regApTribSN === '3' ? 'selected' : '' %>>Federais e ISS fora do Simples</option>
+        </select>
+      </label>
+      <label>% aproximado de tributos do Simples (Lei 12.741)
+        <input type="text" name="pTotTribSN" value="<%= cfg.pTotTribSN ?? 0 %>" inputmode="decimal" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Serie da DPS (1 a 49999)
+        <input type="text" name="serie" value="<%= cfg.serie || '1' %>" inputmode="numeric" />
+      </label>
+      <label>Ultimo numero usado (producao / teste)
+        <span class="duas-colunas">
+          <input type="text" name="ultimoNumero_producao" value="<%= num.producao || 0 %>" inputmode="numeric" title="producao" />
+          <input type="text" name="ultimoNumero_homologacao" value="<%= num.homologacao || 0 %>" inputmode="numeric" title="producao restrita" />
+        </span>
+      </label>
+    </div>
+
+    <h3 class="sub">Padroes do formulario (opcional)</h3>
+    <div class="form-row">
+      <label>Codigo de tributacao nacional <input type="text" name="cTribNac" value="<%= cfg.cTribNac || '' %>" placeholder="ex.: 010701" /></label>
+      <label>Codigo NBS <input type="text" name="cNBS" value="<%= cfg.cNBS || '' %>" /></label>
+    </div>
+    <label>Descricao padrao do servico <textarea name="descricaoPadrao" rows="2"><%= cfg.descricaoPadrao || '' %></textarea></label>
+
+    <div class="form-actions">
+      <button class="btn btn-primary">Salvar</button>
+      <a href="<%= base %>/emitir" class="btn btn-ghost">Voltar</a>
+    </div>
+  </section>
+</form>
+
+<section class="card card-form">
+  <div class="card-head">
+    <h2>O municipio libera o Emissor Nacional?</h2>
+    <form method="post" action="<%= base %>/emitir/configurar/<%= empresa._id %>/convenio"><button class="btn btn-sm">Verificar agora</button></form>
+  </div>
+  <% if (convenio) { %>
+    <% if (!convenio.ok) { %>
+      <p><span class="tag tag-warn">nao foi possivel verificar</span> <%= convenio.mensagem %></p>
+    <% } else { %>
+      <ul class="kv">
+        <li><span class="muted">Aderiu ao ambiente nacional</span><span class="tag <%= convenio.aderenteAmbienteNacional ? 'tag-ok' : 'tag-err' %>"><%= convenio.aderenteAmbienteNacional ? 'sim' : 'nao' %></span></li>
+        <li><span class="muted">Usa o Emissor Nacional</span><span class="tag <%= convenio.aderenteEmissorNacional ? 'tag-ok' : 'tag-err' %>"><%= convenio.aderenteEmissorNacional ? 'sim' : 'nao' %></span></li>
+      </ul>
+      <% if (!convenio.aderenteEmissorNacional) { %><p class="small">Pelo convenio, este municipio nao emite pelo Emissor Nacional: as notas devem ser feitas no sistema da prefeitura.</p><% } %>
+      <% if (convenio.mensagem) { %><p class="muted small"><%= convenio.mensagem %></p><% } %>
+    <% } %>
+  <% } else { %>
+    <p class="muted small">Consulta a parametrizacao do municipio <%= empresa.municipioCodigo || '(sem codigo IBGE)' %> no Ambiente Nacional, com o certificado da empresa.</p>
+  <% } %>
+</section>
+
+<script>
+  (function () {
+    var s = document.getElementById('opSimpNac');
+    function alt() { document.querySelectorAll('.so-simples').forEach(function (el) { el.style.display = s.value === '3' ? '' : 'none'; }); }
+    s.addEventListener('change', alt); alt();
+  })();
+</script>

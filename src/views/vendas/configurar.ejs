@@ -1,0 +1,158 @@
+<%
+  const end = empresa.endereco || {};
+  const num = cfg.numeracao || {};
+  const csc = cfg.csc || {};
+  const rt = cfg.respTec || {};
+  const sel = (a, b) => (String(a) === String(b) ? 'selected' : '');
+  const temCert = !!empresa.certificado;
+%>
+<% if (teste) { %>
+  <section class="card">
+    <div class="card-head"><h2>Teste de comunicacao com a SEFAZ (<%= (cfg.ambiente === 'producao') ? 'producao' : 'homologacao' %>)</h2></div>
+    <ul class="kv">
+      <% [['55', 'NF-e'], ['65', 'NFC-e']].forEach(([m, n]) => { const r = teste[m] || {}; %>
+        <li><span><%= n %></span><span><span class="tag <%= r.ok ? 'tag-ok' : 'tag-err' %>"><%= r.ok ? 'ok' : 'falhou' %></span> <%= r.cStat ? r.cStat + ' - ' : '' %><%= r.xMotivo %></span></li>
+      <% }) %>
+    </ul>
+    <p class="muted small">"107 - Servico em Operacao" significa que o certificado foi aceito e a SEFAZ esta respondendo.</p>
+  </section>
+<% } %>
+
+<form method="post" action="<%= base %>/vendas/configurar/<%= empresa._id %>" class="form">
+  <section class="card">
+    <div class="card-head"><h2>Emissao de NF-e e NFC-e</h2></div>
+    <label class="check"><input type="checkbox" name="ativa" <%= cfg.ativa ? 'checked' : '' %> /> Ativar a emissao para <strong><%= empresa.razaoSocial %></strong></label>
+    <% if (!temCert) { %><p class="small"><span class="tag tag-err">sem certificado</span> Vincule o certificado A1 da empresa antes de emitir.</p><% } %>
+    <div class="form-row">
+      <label>Ambiente
+        <select name="ambiente">
+          <option value="homologacao" <%= sel(cfg.ambiente || 'homologacao', 'homologacao') %>>Homologacao (testes, sem valor fiscal)</option>
+          <option value="producao" <%= sel(cfg.ambiente, 'producao') %>>Producao (notas com valor fiscal)</option>
+        </select>
+      </label>
+      <label>Regime tributario (CRT)
+        <select name="crt">
+          <% Object.entries(CRT).forEach(([k, n]) => { %><option value="<%= k %>" <%= sel(cfg.crt || '1', k) %>><%= n %></option><% }) %>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Inscricao Estadual * <input type="text" name="inscricaoEstadual" value="<%= empresa.inscricaoEstadual || '' %>" inputmode="numeric" required /></label>
+      <label>Natureza da operacao <input type="text" name="naturezaOperacao" value="<%= cfg.naturezaOperacao || 'Venda de mercadoria' %>" maxlength="60" /></label>
+    </div>
+    <p class="muted small">A empresa precisa estar credenciada como emissora de NF-e e de NFC-e na SEFAZ do estado (em MG, pelo SIARE).</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Endereco da empresa</h2></div>
+    <div class="form-row">
+      <label>CEP * <input type="text" name="cep" id="cep" value="<%= end.cep || '' %>" inputmode="numeric" required /></label>
+      <label>Telefone <input type="text" name="fone" value="<%= end.fone || '' %>" inputmode="tel" /></label>
+    </div>
+    <div class="form-row">
+      <label>Logradouro * <input type="text" name="logradouro" id="logradouro" value="<%= end.logradouro || '' %>" required /></label>
+      <label>Numero * <input type="text" name="numero" value="<%= end.numero || '' %>" required /></label>
+    </div>
+    <div class="form-row">
+      <label>Bairro * <input type="text" name="bairro" id="bairro" value="<%= end.bairro || '' %>" required /></label>
+      <label>Complemento <input type="text" name="complemento" value="<%= end.complemento || '' %>" /></label>
+    </div>
+    <div class="form-row">
+      <label>Municipio <input type="text" name="municipioNome" id="municipioNome" value="<%= empresa.municipioNome || '' %>" /></label>
+      <label>Codigo IBGE do municipio <input type="text" name="municipioCodigo" id="municipioCodigo" value="<%= empresa.municipioCodigo || '' %>" inputmode="numeric" maxlength="7" /></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Series e numeracao</h2></div>
+    <div class="form-row">
+      <label>Serie da NF-e <input type="text" name="serieNfe" value="<%= cfg.serieNfe || '1' %>" inputmode="numeric" /></label>
+      <label>Serie da NFC-e <input type="text" name="serieNfce" value="<%= cfg.serieNfce || '1' %>" inputmode="numeric" /></label>
+    </div>
+    <p class="muted small">Ultimo numero ja usado em cada serie. Se a empresa ja emitia por outro sistema, informe o ultimo numero de la para continuar a sequencia.</p>
+    <div class="form-row">
+      <label>Producao - ultima NF-e <input type="text" name="ultimoNfeProducao" value="<%= (num.producao || {})['55'] || 0 %>" inputmode="numeric" /></label>
+      <label>Producao - ultima NFC-e <input type="text" name="ultimoNfceProducao" value="<%= (num.producao || {})['65'] || 0 %>" inputmode="numeric" /></label>
+    </div>
+    <div class="form-row">
+      <label>Homologacao - ultima NF-e <input type="text" name="ultimoNfeHomologacao" value="<%= (num.homologacao || {})['55'] || 0 %>" inputmode="numeric" /></label>
+      <label>Homologacao - ultima NFC-e <input type="text" name="ultimoNfceHomologacao" value="<%= (num.homologacao || {})['65'] || 0 %>" inputmode="numeric" /></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>NFC-e: CSC e QR Code</h2></div>
+    <p class="muted small">O CSC (Codigo de Seguranca do Contribuinte) e o ID dele sao gerados no portal da SEFAZ (em MG, no SIARE), um para producao e outro para homologacao. O token fica guardado e nao aparece de novo nesta tela.</p>
+    <div class="form-row">
+      <label>Producao - ID do CSC <input type="text" name="cscIdProducao" value="<%= (csc.producao || {}).id || '' %>" inputmode="numeric" placeholder="ex.: 000001" /></label>
+      <label>Producao - CSC (token) <input type="password" name="cscProducao" value="" autocomplete="off" placeholder="<%= (csc.producao || {}).token ? 'cadastrado - deixe vazio para manter' : '' %>" /></label>
+    </div>
+    <div class="form-row">
+      <label>Homologacao - ID do CSC <input type="text" name="cscIdHomologacao" value="<%= (csc.homologacao || {}).id || '' %>" inputmode="numeric" /></label>
+      <label>Homologacao - CSC (token) <input type="password" name="cscHomologacao" value="" autocomplete="off" placeholder="<%= (csc.homologacao || {}).token ? 'cadastrado - deixe vazio para manter' : '' %>" /></label>
+    </div>
+    <label>Versao do QR Code
+      <select name="versaoQrCode">
+        <option value="" <%= sel(cfg.versaoQrCode || '', '') %>>Padrao da SEFAZ do estado</option>
+        <option value="2" <%= sel(cfg.versaoQrCode, '2') %>>Versao 2 (usa o CSC)</option>
+        <option value="3" <%= sel(cfg.versaoQrCode, '3') %>>Versao 3 (NT 2025.001, sem CSC)</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Impostos (Simples Nacional)</h2></div>
+    <div class="form-row">
+      <label>Credito de ICMS do Simples (%) - so para CSOSN 101 <input type="text" name="pCredSN" value="<%= cfg.pCredSN || '' %>" inputmode="decimal" placeholder="ex.: 1,25" /></label>
+      <label>CST de PIS/COFINS
+        <select name="cstPisCofins">
+          <option value="49" <%= sel(cfg.cstPisCofins || '49', '49') %>>49 - Outras operacoes de saida (padrao do Simples)</option>
+          <option value="99" <%= sel(cfg.cstPisCofins, '99') %>>99 - Outras operacoes</option>
+          <option value="07" <%= sel(cfg.cstPisCofins, '07') %>>07 - Operacao isenta</option>
+          <option value="08" <%= sel(cfg.cstPisCofins, '08') %>>08 - Sem incidencia</option>
+        </select>
+      </label>
+    </div>
+    <label>Texto fixo nas informacoes complementares (opcional) <input type="text" name="infComplementarPadrao" value="<%= cfg.infComplementarPadrao || '' %>" maxlength="1000" /></label>
+    <p class="muted small">O texto obrigatorio do Simples Nacional ("documento emitido por ME ou EPP optante...") entra sozinho. Os campos de IBS/CBS da reforma tributaria passam a ser obrigatorios para o Simples em 01/01/2027.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Responsavel tecnico pelo sistema</h2></div>
+    <p class="muted small">Exigido por varias SEFAZ. Use os dados de quem mantem este sistema (pode ser a propria empresa).</p>
+    <div class="form-row">
+      <label>CNPJ <input type="text" name="respCnpj" value="<%= rt.cnpj || '' %>" inputmode="numeric" /></label>
+      <label>Contato <input type="text" name="respContato" value="<%= rt.contato || '' %>" /></label>
+    </div>
+    <div class="form-row">
+      <label>E-mail <input type="email" name="respEmail" value="<%= rt.email || '' %>" /></label>
+      <label>Telefone <input type="text" name="respFone" value="<%= rt.fone || '' %>" inputmode="tel" /></label>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary">Salvar</button>
+      <a href="<%= base %>/vendas" class="btn btn-ghost">Voltar</a>
+    </div>
+  </section>
+</form>
+
+<section class="card">
+  <div class="card-head"><h2>Testar comunicacao</h2></div>
+  <p class="muted small">Consulta o status do servico da SEFAZ de <%= empresa.uf %> com o certificado da empresa, sem emitir nada. Salve antes de testar.</p>
+  <form method="post" action="<%= base %>/vendas/configurar/<%= empresa._id %>/testar" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Consultando...'">
+    <button class="btn">Testar conexao com a SEFAZ</button>
+  </form>
+</section>
+
+<script>
+  document.getElementById('cep').addEventListener('blur', function () {
+    var n = this.value.replace(/\D/g, '');
+    if (n.length !== 8) return;
+    fetch('https://viacep.com.br/ws/' + n + '/json/').then(function (r) { return r.json(); }).then(function (d) {
+      if (d.erro) return;
+      document.getElementById('municipioCodigo').value = d.ibge || '';
+      document.getElementById('municipioNome').value = d.localidade || '';
+      var l = document.getElementById('logradouro'); if (!l.value) l.value = d.logradouro || '';
+      var b = document.getElementById('bairro'); if (!b.value) b.value = d.bairro || '';
+    }).catch(function () {});
+  });
+</script>

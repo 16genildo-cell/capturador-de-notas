@@ -1,0 +1,83 @@
+<%
+  const e = emissao;
+  const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dataHora = (d) => (d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-');
+  const tag = { autorizada: 'tag-ok', rejeitada: 'tag-err', denegada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' }[e.status];
+  const txt = { autorizada: 'Autorizada', rejeitada: 'Rejeitada', denegada: 'Denegada', sem_resposta: 'Sem resposta da SEFAZ', cancelada: 'Cancelada' }[e.status];
+  const valida = e.status === 'autorizada' || e.status === 'cancelada';
+  const nomeEvento = { 110111: 'Cancelamento', 110110: 'Carta de correcao' };
+%>
+<div class="page-actions row-actions">
+  <a href="<%= base %>/vendas<%= locals.empresaAtual ? '' : '?empresa=' + (e.empresa && e.empresa._id) %>" class="btn btn-ghost">Voltar</a>
+  <% if (valida) { %>
+    <a href="<%= base %>/vendas/<%= e._id %>/pdf" target="_blank" class="btn btn-primary"><%= e.modelo === '65' ? 'Imprimir cupom (DANFE NFC-e)' : 'Ver DANFE' %></a>
+    <a href="<%= base %>/vendas/<%= e._id %>/pdf?baixar=1" class="btn">Baixar PDF</a>
+  <% } %>
+  <a href="<%= base %>/vendas/<%= e._id %>/xml" class="btn">XML</a>
+  <% if (e.nota) { %><a href="<%= base %>/notas/<%= e.nota %>" class="btn">Ver nas notas fiscais</a><% } %>
+  <a href="<%= base %>/vendas?de=<%= e._id %>" class="btn">Emitir outra igual</a>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2><%= nome %> n <%= e.numero %> · serie <%= e.serie %></h2>
+    <span><span class="tag <%= tag %>"><%= txt %></span><% if (e.ambiente !== 'producao') { %> <span class="tag tag-warn" title="Ambiente de testes: sem valor fiscal">homologacao</span><% } %></span>
+  </div>
+  <% if (e.status === 'rejeitada' || e.status === 'denegada') { %>
+    <div class="flash flash-erro"><strong><%= e.cStat %> - <%= e.xMotivo %></strong>
+      <% if (e.status === 'rejeitada') { %><br><span class="small">A nota nao foi emitida e o numero continua livre. Corrija o problema (cadastro do produto, cliente ou configuracao) e emita de novo.</span><% } %></div>
+  <% } %>
+  <% if (e.status === 'sem_resposta') { %>
+    <div class="flash flash-info">A SEFAZ nao respondeu a tempo. A nota pode ter sido autorizada: consulte antes de emitir de novo.
+      <form method="post" action="<%= base %>/vendas/<%= e._id %>/reconsultar" class="inline"><button class="btn btn-sm">Consultar na SEFAZ</button></form>
+      <% if (e.xMotivo) { %><div class="small muted"><%= e.xMotivo %></div><% } %>
+    </div>
+  <% } %>
+  <ul class="kv">
+    <li><span class="muted">Emitente</span><span><%= e.empresa ? e.empresa.razaoSocial : '-' %></span></li>
+    <li><span class="muted">Cliente</span><span><%= e.destNome || (e.modelo === '65' ? 'Consumidor nao identificado' : '-') %><%= e.destDocumento ? ' · ' + e.destDocumento : '' %></span></li>
+    <li><span class="muted">Valor</span><span>R$ <%= brl(e.valor) %> · <%= e.qtdItens %> item(ns)</span></li>
+    <li><span class="muted">Chave de acesso</span><span class="small mono"><%= (e.chave || '').replace(/(\d{4})(?=\d)/g, '$1 ') %></span></li>
+    <li><span class="muted">Protocolo</span><span><%= e.protocolo || '-' %><%= e.dataAutorizacao ? ' · ' + dataHora(e.dataAutorizacao) : '' %></span></li>
+    <li><span class="muted">Emitida em</span><span><%= dataHora(e.createdAt) %></span></li>
+  </ul>
+</section>
+
+<% if ((e.eventos || []).length) { %>
+<section class="card">
+  <div class="card-head"><h2>Eventos</h2></div>
+  <ul class="log-list">
+    <% e.eventos.forEach((ev, i) => { const ok = ['135', '136', '155'].includes(ev.cStat); %>
+      <li>
+        <span class="tag <%= ok ? 'tag-ok' : 'tag-err' %>"><%= ok ? 'registrado' : 'recusado' %></span>
+        <strong><%= nomeEvento[ev.tipo] || ev.tipo %><%= ev.tipo === '110110' ? ' n ' + ev.seq : '' %></strong>
+        <span class="log-msg"><%= ev.texto %> · <%= ev.cStat %> - <%= ev.xMotivo %> · <%= dataHora(ev.data) %></span>
+        <a href="<%= base %>/vendas/<%= e._id %>/xml?evento=<%= i %>" class="link small">XML</a>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>
+
+<% if (e.status === 'autorizada' && locals.ehAdmin) { %>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Cancelar <%= nome %></h2></div>
+    <p class="muted small">Prazo: NF-e ate 24 horas apos a autorizacao; NFC-e em poucos minutos (em MG, confira o prazo atual da SEFAZ). Depois disso a SEFAZ recusa.</p>
+    <form method="post" action="<%= base %>/vendas/<%= e._id %>/cancelar" class="form" onsubmit="return confirm('Cancelar esta nota na SEFAZ? Nao da para desfazer.')">
+      <label>Justificativa (15 a 255 caracteres) <input type="text" name="justificativa" minlength="15" maxlength="255" required /></label>
+      <button class="btn btn-danger">Cancelar nota</button>
+    </form>
+  </section>
+  <% if (e.modelo === '55') { %>
+  <section class="card">
+    <div class="card-head"><h2>Carta de correcao</h2></div>
+    <p class="muted small">Nao pode alterar valores, impostos, quantidades, remetente/destinatario nem a data. Cada nova carta substitui a anterior.</p>
+    <form method="post" action="<%= base %>/vendas/<%= e._id %>/cce" class="form">
+      <label>Correcao (15 a 1000 caracteres) <textarea name="correcao" rows="3" minlength="15" maxlength="1000" required></textarea></label>
+      <button class="btn">Enviar carta de correcao</button>
+    </form>
+  </section>
+  <% } %>
+</div>
+<% } %>

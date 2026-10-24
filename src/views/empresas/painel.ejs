@@ -1,0 +1,197 @@
+<%
+  const brl = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nomesMes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const rotMes = (m) => { const [a, mm] = m.split('-'); return `${nomesMes[Number(mm) - 1]}/${a.slice(2)}`; };
+  const maxV = Math.max(1, ...meses.map((m) => Math.max(m.entradas.valor, m.saidas.valor)));
+  const pt = stats.porTipo;
+  const qtd = (t) => (pt[t] ? pt[t].qtd : 0);
+  const cfg = empresa.emissaoNfse || {};
+  const dataHora = (d) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+  const tagLog = (s) => (s === 'sucesso' ? 'ok' : s === 'erro' ? 'err' : 'warn');
+  const mesHoje = hoje.slice(0, 7);
+  const tiposAtivos = ['nfe', 'nfse', 'cte'].filter((t) => !empresa.captura || empresa.captura[t] !== false);
+%>
+
+<% if (pendencias.manifestacao || pendencias.resumos) { %>
+  <div class="pendencias">
+    <% if (pendencias.resumos) { %><a href="<%= base %>/notas?situacao=resumo" class="chip"><strong><%= pendencias.resumos %></strong> nota(s) so com resumo - baixar XML completo</a><% } %>
+    <% if (pendencias.manifestacao) { %><a href="<%= base %>/notas?situacao=manifestar" class="chip"><strong><%= pendencias.manifestacao %></strong> NF-e aguardando manifestacao</a><% } %>
+  </div>
+<% } %>
+
+<section class="cards">
+  <a class="card stat" href="<%= base %>/notas">
+    <div class="card-stat-top">
+      <span class="stat-label">Documentos</span>
+      <div class="stat-icon-wrapper" style="color: #6366f1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.total %></span>
+  </a>
+  <a class="card stat" href="<%= base %>/notas?categoria=produtos">
+    <div class="card-stat-top">
+      <span class="stat-label">NF-e / NFC-e</span>
+      <div class="stat-icon-wrapper" style="color: #38bdf8;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= qtd('nfe') + qtd('nfce') %></span>
+  </a>
+  <a class="card stat" href="<%= base %>/notas?categoria=servicos">
+    <div class="card-stat-top">
+      <span class="stat-label">NFS-e</span>
+      <div class="stat-icon-wrapper" style="color: #c084fc;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= qtd('nfse') %></span>
+  </a>
+  <a class="card stat" href="<%= base %>/notas?categoria=cte">
+    <div class="card-stat-top">
+      <span class="stat-label">CT-e</span>
+      <div class="stat-icon-wrapper" style="color: #fb923c;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="13" x="4" y="5" rx="2"/><path d="M16 2v3"/><path d="M8 2v3"/><path d="M10 14l2 2 4-4"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= qtd('cte') %></span>
+  </a>
+  <a class="card stat" href="<%= base %>/notas?mes=<%= mesHoje %>&papel=tomadas">
+    <div class="card-stat-top">
+      <span class="stat-label">Entradas no mês</span>
+      <div class="stat-icon-wrapper" style="color: #38bdf8;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+    </div>
+    <span class="stat-value small-value mono">R$ <%= brl(mesAtual && mesAtual.entradas.valor) %></span>
+  </a>
+  <a class="card stat" href="<%= base %>/notas?mes=<%= mesHoje %>&papel=prestadas">
+    <div class="card-stat-top">
+      <span class="stat-label">Saídas no mês</span>
+      <div class="stat-icon-wrapper" style="color: #34d399;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+      </div>
+    </div>
+    <span class="stat-value small-value mono">R$ <%= brl(mesAtual && mesAtual.saidas.valor) %></span>
+  </a>
+</section>
+
+<div class="grid-2 grid-painel">
+  <section class="card">
+    <div class="card-head"><h2>Ultimos 12 meses</h2>
+      <span class="legenda"><i class="leg leg-entrada"></i> entradas <i class="leg leg-saida"></i> saidas</span>
+    </div>
+    <% if (meses.length === 0) { %>
+      <p class="muted">Sem notas nos ultimos 12 meses. Clique em <strong>Capturar agora</strong> ou importe os XMLs.</p>
+    <% } else { %>
+      <div class="grafico-barras" role="img" aria-label="Entradas e saidas por mes">
+        <% meses.forEach((m) => { %>
+          <a class="gb-coluna" href="<%= base %>/notas?mes=<%= m.mes %>" title="<%= rotMes(m.mes) %>: entradas R$ <%= brl(m.entradas.valor) %> / saidas R$ <%= brl(m.saidas.valor) %>">
+            <div class="gb-barras">
+              <div class="gb-barra entrada" style="height: <%= (m.entradas.valor / maxV * 100).toFixed(1) %>%"></div>
+              <div class="gb-barra saida" style="height: <%= (m.saidas.valor / maxV * 100).toFixed(1) %>%"></div>
+            </div>
+            <span class="gb-rotulo"><%= rotMes(m.mes) %></span>
+          </a>
+        <% }) %>
+      </div>
+      <a href="<%= base %>/relatorios" class="link">ver relatorios</a>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Captura</h2><a href="<%= base %>/captura" class="link">historico</a></div>
+    <% if (!empresa.certificado) { %>
+      <p class="small"><span class="tag tag-warn">sem certificado</span> Sem o certificado A1 nao da para capturar nem emitir.
+        <% if (locals.ehAdmin) { %><a href="<%= base %>/editar" class="link">Vincular certificado</a><% } %></p>
+    <% } %>
+    <div class="status-captura">
+      <% tiposAtivos.forEach((t) => { const l = capturas[t]; %>
+        <div class="sc-item">
+          <strong><%= ROT_TIPO[t] %></strong>
+          <% if (l) { %>
+            <span><span class="tag tag-<%= tagLog(l.status) %>"><%= l.status %></span> <span class="muted small"><%= dataHora(l.createdAt) %></span></span>
+            <span class="small"><%= l.novos %> novo(s) · <%= l.mensagem || '' %></span>
+          <% } else { %>
+            <span class="muted small">Ainda nao capturado.</span>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Emitir NFS-e</h2>
+    <% if (cfg.ativa) { %>
+      <span class="links-head">
+        <a href="<%= base %>/emitir#formulario" class="link">nota avulsa</a>
+        <a href="<%= base %>/emitir/servicos" class="link"><%= locals.ehAdmin ? 'cadastrar / editar servicos' : 'ver servicos' %></a>
+      </span>
+    <% } %>
+  </div>
+  <% if (!cfg.ativa) { %>
+    <p class="muted small">A emissao de NFS-e pelo Emissor Nacional ainda nao esta ativada para esta empresa.
+      <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/configurar/<%= empresa._id %>" class="link">Configurar emissao</a><% } else { %>Peca a um administrador para configurar.<% } %></p>
+  <% } else if (!servicos.length) { %>
+    <p class="muted small">Cadastre os servicos que esta empresa presta e emita cada nota com um clique.
+      <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/servicos/novo?empresa=<%= empresa._id %>" class="link">Cadastrar o primeiro servico</a><% } %></p>
+  <% } else { %>
+    <%- include('../emitir/_servicos-cards', { servicos, cfg, hoje }) %>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Ultimas notas</h2><a href="<%= base %>/notas" class="link">ver todas</a></div>
+    <% if (ultimasNotas.length === 0) { %>
+      <p class="muted">Nenhuma nota ainda.</p>
+    <% } else { %>
+      <div class="tabela-rolagem">
+      <table class="table">
+        <thead><tr><th>Tipo</th><th>Emitente / prestador</th><th>Emissao</th><th class="dir">Valor</th></tr></thead>
+        <tbody>
+          <% ultimasNotas.forEach((n) => { %>
+            <tr>
+              <td><a href="<%= base %>/notas/<%= n._id %>"><span class="tag tag-<%= n.tipo %>"><%= n.tipo.toUpperCase() %></span></a><% if (n.cancelada) { %> <span class="tag tag-err">cancelada</span><% } %></td>
+              <td><a href="<%= base %>/notas/<%= n._id %>" class="link"><%= n.emitenteNome || n.emitenteCnpjCpf || '-' %></a></td>
+              <td class="muted small nowrap"><%= n.dataEmissao ? new Date(n.dataEmissao).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-' %></td>
+              <td class="dir nowrap">R$ <%= brl(n.valorTotal) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Atalhos</h2></div>
+    <div class="atalhos">
+      <a href="<%= base %>/vendas?modelo=65" class="btn btn-sm btn-primary">Emitir NFC-e</a>
+      <a href="<%= base %>/vendas?modelo=55" class="btn btn-sm btn-primary">Emitir NF-e</a>
+      <a href="<%= base %>/notas/exportar?mes=<%= mesHoje %>&formato=ambos" class="btn btn-sm">XML + PDF do mes (ZIP)</a>
+      <a href="<%= base %>/relatorios/excel?ano=<%= hoje.slice(0, 4) %>" class="btn btn-sm">Excel do ano</a>
+      <a href="<%= base %>/notas?papel=tomadas" class="btn btn-sm">Notas tomadas</a>
+      <a href="<%= base %>/notas?papel=prestadas" class="btn btn-sm">Notas prestadas</a>
+      <% if (locals.ehAdmin) { %>
+        <a href="<%= base %>/importar" class="btn btn-sm">Importar XML</a>
+        <a href="<%= base %>/editar" class="btn btn-sm btn-ghost">Dados do cliente</a>
+      <% } %>
+    </div>
+    <% if (emissoes.length) { %>
+      <h3 class="sub">Ultimas emissoes</h3>
+      <ul class="log-list">
+        <% emissoes.forEach((h) => { %>
+          <li>
+            <span class="tag <%= { autorizada: 'tag-ok', rejeitada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' }[h.status] %>"><%= h.status.replace('_', ' ') %></span>
+            <% if (h.ambiente !== 'producao') { %><span class="tag tag-warn">teste</span><% } %>
+            <a href="<%= base %>/emitir/<%= h._id %>" class="link"><%= h.tomadorNome || 'sem tomador' %></a>
+            <span class="log-msg">R$ <%= brl(h.valor) %> · <%= dataHora(h.createdAt) %></span>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</div>

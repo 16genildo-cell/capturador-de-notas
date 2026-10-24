@@ -1,0 +1,186 @@
+<%
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const tagStatus = { ativa: 'tag-ok', cortesia: 'tag-ok', teste: 'tag-warn', pendente: 'tag-warn', inadimplente: 'tag-err', cancelada: 'tag-err', suspensa: 'tag-err' };
+%>
+<section class="cards">
+  <div class="card stat">
+    <span class="stat-label">Receita mensal (estimada)</span>
+    <span class="stat-value"><%= brl(resumo.mrr) %></span>
+    <span class="muted small"><%= resumo.pagantes %> conta(s) pagante(s)</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Escritorios</span>
+    <span class="stat-value"><%= resumo.total %></span>
+    <span class="muted small"><%= resumo.porStatus.teste || 0 %> em teste · <%= resumo.porStatus.cortesia || 0 %> cortesia</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Em atraso / canceladas</span>
+    <span class="stat-value"><%= (resumo.porStatus.inadimplente || 0) %> / <%= (resumo.porStatus.cancelada || 0) %></span>
+    <span class="muted small"><%= resumo.porStatus.suspensa || 0 %> suspensa(s)</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Cobranca Asaas</span>
+    <span class="stat-value small-value"><span class="tag <%= asaasAtivo ? 'tag-ok' : 'tag-warn' %>"><%= asaasAtivo ? asaasAmbiente : 'nao configurada' %></span></span>
+    <span class="muted small"><a class="link" href="/saude">Saude do servidor</a></span>
+  </div>
+</section>
+
+<section class="card" id="mensagens">
+  <div class="card-head">
+    <h2>Mensagens do site <% if (mensagens.naoLidas) { %><span class="tag tag-warn"><%= mensagens.naoLidas %> nova(s)</span><% } %></h2>
+    <div class="filters">
+      <a class="btn btn-sm <%= mensagens.filtro === 'novas' ? 'btn-primary' : 'btn-ghost' %>" href="?msgs=novas#mensagens">Novas</a>
+      <a class="btn btn-sm <%= mensagens.filtro === 'todas' ? 'btn-primary' : 'btn-ghost' %>" href="?msgs=todas#mensagens">Todas (<%= mensagens.total %>)</a>
+      <a class="btn btn-sm <%= mensagens.filtro === 'arquivadas' ? 'btn-primary' : 'btn-ghost' %>" href="?msgs=arquivadas#mensagens">Arquivadas</a>
+    </div>
+  </div>
+  <% if (!mensagens.itens.length) { %>
+    <p class="muted"><%= mensagens.filtro === 'novas' ? 'Nenhuma mensagem nova.' : 'Nenhuma mensagem aqui.' %></p>
+  <% } %>
+  <% mensagens.itens.forEach((m) => { const mid = String(m._id); %>
+    <article style="border-top:1px solid #e5e7eb;padding:12px 0">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <strong><%= m.nome %></strong><% if (!m.lida) { %> <span class="tag tag-warn">nova</span><% } %>
+          <div class="muted small">
+            <a class="link" href="mailto:<%= m.email %>?subject=<%= encodeURIComponent('Re: seu contato pelo site') %>"><%= m.email %></a>
+            <%= m.telefone ? ' · ' + m.telefone : '' %><%= m.escritorio ? ' · ' + m.escritorio : '' %><%= m.qtdClientes ? ' · ' + m.qtdClientes + ' clientes' : '' %>
+          </div>
+        </div>
+        <span class="muted small nowrap"><%= new Date(m.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></span>
+      </div>
+      <p style="white-space:pre-wrap;margin:8px 0"><%= m.mensagem %></p>
+      <div class="row-actions">
+        <a class="btn btn-sm btn-primary" href="mailto:<%= m.email %>?subject=<%= encodeURIComponent('Re: seu contato pelo site') %>">Responder por e-mail</a>
+        <% if (m.telefone) { const fone = String(m.telefone).replace(/\D/g, ''); %><a class="btn btn-sm" target="_blank" rel="noopener" href="https://wa.me/<%= fone.length <= 11 ? '55' + fone : fone %>">WhatsApp</a><% } %>
+        <form method="post" action="/plataforma/mensagens/<%= mid %>" class="inline"><input type="hidden" name="acao" value="<%= m.lida ? 'naoLida' : 'lida' %>" /><button class="btn btn-sm btn-ghost"><%= m.lida ? 'Marcar como nao lida' : 'Marcar como lida' %></button></form>
+        <form method="post" action="/plataforma/mensagens/<%= mid %>" class="inline"><input type="hidden" name="acao" value="<%= m.arquivada ? 'desarquivar' : 'arquivar' %>" /><button class="btn btn-sm btn-ghost"><%= m.arquivada ? 'Voltar para a caixa' : 'Arquivar' %></button></form>
+        <form method="post" action="/plataforma/mensagens/<%= mid %>" class="inline" onsubmit="return confirm('Excluir esta mensagem?')"><input type="hidden" name="acao" value="excluir" /><button class="btn btn-sm btn-danger">Excluir</button></form>
+      </div>
+    </article>
+  <% }) %>
+</section>
+
+<section class="card">
+  <details>
+    <summary class="btn btn-primary">+ Novo escritorio</summary>
+    <form method="post" action="/plataforma/contas" class="form" style="margin-top:16px">
+      <div class="form-row">
+        <label>Responsavel pelo escritorio<input name="nome" required /></label>
+        <label>E-mail de acesso<input type="email" name="email" required /></label>
+      </div>
+      <div class="form-row">
+        <label>Nome do escritorio<input name="conta" placeholder="Ex.: Contabilidade Silva" /></label>
+        <label>CNPJ ou CPF de cobranca (opcional)<input name="documento" inputmode="numeric" /></label>
+      </div>
+      <div class="form-row">
+        <label>Celular (opcional)<input type="tel" name="telefone" /></label>
+        <label>Senha inicial (opcional, min. 8)<input type="password" name="senha" minlength="8" autocomplete="new-password" placeholder="em branco: convite por e-mail ou senha provisoria" /></label>
+      </div>
+      <div class="form-row">
+        <label>Situacao
+          <select name="situacao">
+            <% situacoesIniciais.forEach((s) => { %><option value="<%= s %>"><%= s === 'teste' ? 'Teste gratis' : 'Cortesia (sem cobranca)' %></option><% }) %>
+          </select>
+        </label>
+        <label>Dias de teste<input type="number" name="diasTeste" min="1" max="365" value="<%= teste.dias %>" /></label>
+      </div>
+      <div class="form-row">
+        <label>Plano (opcional)
+          <select name="plano"><option value="">nenhum (cliente escolhe depois)</option><% planos.forEach((p) => { %><option value="<%= p.id %>"><%= p.nome %> (<%= p.empresas == null ? 'ilimitado' : p.empresas + ' clientes' %>)</option><% }) %></select>
+        </label>
+        <label>Limite especial de clientes (opcional)<input type="number" name="limite" min="0" placeholder="do plano" /></label>
+      </div>
+      <label>Anotacao interna (opcional)<input name="observacao" maxlength="1000" /></label>
+      <p class="muted small">Sem senha inicial: se o e-mail (SMTP) estiver configurado, o escritorio recebe um convite para criar a senha; senao, uma senha provisoria aparece aqui uma unica vez.</p>
+      <button class="btn btn-primary">Criar escritorio</button>
+    </form>
+  </details>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Escritorios</h2>
+    <form method="get" class="filters">
+      <input type="search" name="q" value="<%= busca %>" placeholder="nome, e-mail, CNPJ" />
+      <select name="status">
+        <option value="">todas as situacoes</option>
+        <% STATUS.forEach((s) => { %><option value="<%= s %>" <%= filtroStatus === s ? 'selected' : '' %>><%= s %> (<%= resumo.porStatus[s] || 0 %>)</option><% }) %>
+      </select>
+      <button class="btn btn-sm">Filtrar</button>
+    </form>
+  </div>
+  <div class="tabela-rolagem">
+  <table class="table">
+    <thead><tr><th>Escritorio</th><th>Situacao</th><th>Plano</th><th>Clientes</th><th>Usuarios</th><th>Notas</th><th>Teste / pago ate</th><th>Ultimo acesso</th><th></th></tr></thead>
+    <tbody>
+      <% if (!contas.length) { %><tr><td colspan="9" class="muted">Nenhum escritorio.</td></tr><% } %>
+      <% contas.forEach((c) => { const id = String(c._id); %>
+        <tr>
+          <td>
+            <a class="link" href="/plataforma/escritorios/<%= id %>"><strong><%= c.nome %></strong></a>
+            <div class="muted small"><%= c.dono ? c.dono.email : '-' %><%= c.documento ? ' · ' + c.documento : '' %></div>
+            <% if (c.observacao) { %><div class="small"><%= c.observacao %></div><% } %>
+          </td>
+          <td>
+            <span class="tag <%= tagStatus[c.status] || '' %>"><%= c.status %></span>
+            <% if (!c.acesso.liberado) { %><div class="small"><span class="tag tag-err">bloqueada</span></div><% } %>
+          </td>
+          <td><%= c.plano ? planos.find((p) => p.id === c.plano)?.nome : '-' %></td>
+          <td class="nowrap"><%= c.empresas %> / <%= c.limite === Infinity ? '∞' : c.limite %></td>
+          <td><%= c.usuarios %></td>
+          <td><%= c.notas.toLocaleString('pt-BR') %></td>
+          <td class="small nowrap"><%= ['teste', 'pendente'].includes(c.status) ? fmt(c.testeAte) : fmt(c.pagoAte) %></td>
+          <td class="small nowrap muted"><%= fmt(c.ultimoAcesso) %></td>
+          <td class="row-actions">
+            <details class="inline-det">
+              <summary class="btn btn-sm btn-ghost">Ajustar</summary>
+              <div class="ajustes-conta">
+                <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+                  <input type="hidden" name="acao" value="status" />
+                  <select name="status"><% STATUS.forEach((s) => { %><option <%= c.status === s ? 'selected' : '' %>><%= s %></option><% }) %></select>
+                  <button class="btn btn-sm">Mudar situacao</button>
+                </form>
+                <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+                  <input type="hidden" name="acao" value="plano" />
+                  <select name="plano"><option value="">sem plano</option><% planos.forEach((p) => { %><option value="<%= p.id %>" <%= c.plano === p.id ? 'selected' : '' %>><%= p.nome %></option><% }) %></select>
+                  <button class="btn btn-sm">Mudar plano</button>
+                </form>
+                <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+                  <input type="hidden" name="acao" value="estender-teste" />
+                  <input type="number" name="dias" value="7" min="1" max="365" />
+                  <button class="btn btn-sm">Estender teste (dias)</button>
+                </form>
+                <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+                  <input type="hidden" name="acao" value="limite" />
+                  <input type="number" name="limite" min="0" placeholder="do plano" value="<%= c.limiteEmpresasManual ?? '' %>" />
+                  <button class="btn btn-sm">Limite de clientes</button>
+                </form>
+                <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+                  <input type="hidden" name="acao" value="observacao" />
+                  <input type="text" name="observacao" placeholder="anotacao interna" value="<%= c.observacao || '' %>" />
+                  <button class="btn btn-sm">Salvar nota</button>
+                </form>
+              </div>
+            </details>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Ultimos eventos de cobranca</h2></div>
+  <% if (!eventos.length) { %>
+    <p class="muted">Nenhum evento recebido do Asaas ainda.</p>
+  <% } else { %>
+    <ul class="log-list">
+      <% eventos.forEach((e) => { %>
+        <li><span class="tag <%= /RECEIVED|CONFIRMED/.test(e.evento) ? 'tag-ok' : /OVERDUE|DELETED|REFUND|CHARGEBACK/.test(e.evento) ? 'tag-err' : '' %>"><%= e.evento %></span>
+          <span class="muted"><%= e.conta ? e.conta.nome : 'conta nao identificada' %> · <%= new Date(e.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></span></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>

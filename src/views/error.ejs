@@ -1,0 +1,12 @@
+<div class="card" style="max-width: 540px; margin: 40px auto; text-align: center; padding: 40px 32px;">
+  <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--err-bg); border: 1px solid var(--err-border); color: var(--err-text); display: grid; place-items: center; margin: 0 auto 18px auto;">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </div>
+  <div class="tag tag-err" style="margin-bottom: 12px; font-size: 0.8rem;">Código <%= status %></div>
+  <h2 style="font-size: 1.35rem; margin-bottom: 8px;"><%= status === 404 ? 'Página não encontrada' : 'Ocorreu um erro' %></h2>
+  <p class="muted" style="margin-bottom: 24px; font-size: 0.92rem;"><%= message %></p>
+  <div style="display: flex; gap: 10px; justify-content: center;">
+    <a href="javascript:history.back()" class="btn btn-ghost">Voltar</a>
+    <a href="/" class="btn btn-primary">Voltar ao painel</a>
+  </div>
+</div>

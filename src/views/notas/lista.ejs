@@ -1,0 +1,207 @@
+<%
+  const mesesNomes = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const anoAtual = new Date().getFullYear();
+  const listaAnos = Array.from(new Set([anoAtual, anoAtual - 1, ...anos])).sort((a, b) => b - a);
+  const mesSel = filtros.mes ? Number(filtros.mes.split('-')[1]) : '';
+  const anoSel = filtros.mes ? filtros.mes.split('-')[0] : filtros.ano;
+  const brl = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rotTipo = { nfe: 'NF-e', nfce: 'NFC-e', nfse: 'NFS-e', cte: 'CT-e', evento: 'Evento' };
+%>
+
+<!-- Atalhos de categoria -->
+<nav class="chips">
+  <a href="<%= base %>/notas?<%= qs({ categoria: '', page: '' }) %>" class="chip <%= !filtros.categoria ? 'active' : '' %>">Todas</a>
+  <% Object.entries(categorias).forEach(([k, c]) => { %>
+    <a href="<%= base %>/notas?<%= qs({ categoria: k, page: '' }) %>" class="chip <%= filtros.categoria === k ? 'active' : '' %>"><%= c.rotulo %></a>
+  <% }) %>
+  <span class="chips-sep"></span>
+  <a href="<%= base %>/notas?<%= qs({ papel: filtros.papel === 'tomadas' ? '' : 'tomadas', page: '' }) %>" class="chip <%= filtros.papel === 'tomadas' ? 'active' : '' %>">Tomadas / recebidas</a>
+  <a href="<%= base %>/notas?<%= qs({ papel: filtros.papel === 'prestadas' ? '' : 'prestadas', page: '' }) %>" class="chip <%= filtros.papel === 'prestadas' ? 'active' : '' %>">Prestadas / emitidas</a>
+</nav>
+
+<form method="get" action="<%= base %>/notas" class="filters card" id="form-filtros">
+  <input type="hidden" name="categoria" value="<%= filtros.categoria %>" />
+  <input type="hidden" name="mes" value="<%= filtros.mes %>" id="campo-mes" />
+  <input type="text" name="q" value="<%= filtros.q %>" placeholder="Nome, CPF/CNPJ, numero ou chave..." />
+
+  <label class="filtro">Mes
+    <select id="sel-mes">
+      <option value="">Todos</option>
+      <% mesesNomes.forEach((m, i) => { %>
+        <option value="<%= i + 1 %>" <%= mesSel === i + 1 ? 'selected' : '' %>><%= m %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label class="filtro">Ano
+    <select name="ano" id="sel-ano">
+      <option value="">Todos</option>
+      <% listaAnos.forEach((a) => { %>
+        <option value="<%= a %>" <%= String(anoSel) === String(a) ? 'selected' : '' %>><%= a %></option>
+      <% }) %>
+    </select>
+  </label>
+  <label class="filtro">De <input type="date" name="de" value="<%= filtros.de %>" /></label>
+  <label class="filtro">Ate <input type="date" name="ate" value="<%= filtros.ate %>" /></label>
+
+  <label class="filtro">Papel
+    <select name="papel">
+      <option value="">Todas</option>
+      <option value="tomadas" <%= filtros.papel === 'tomadas' ? 'selected' : '' %>>Tomadas / recebidas (entrada)</option>
+      <option value="prestadas" <%= filtros.papel === 'prestadas' ? 'selected' : '' %>>Prestadas / emitidas (saida)</option>
+    </select>
+  </label>
+  <label class="filtro">Situacao
+    <select name="situacao">
+      <option value="">Todas</option>
+      <option value="ativas" <%= filtros.situacao === 'ativas' ? 'selected' : '' %>>Nao canceladas</option>
+      <option value="canceladas" <%= filtros.situacao === 'canceladas' ? 'selected' : '' %>>Canceladas</option>
+      <option value="completas" <%= filtros.situacao === 'completas' ? 'selected' : '' %>>Com XML completo</option>
+      <option value="resumo" <%= filtros.situacao === 'resumo' ? 'selected' : '' %>>So resumo</option>
+      <option value="manifestar" <%= filtros.situacao === 'manifestar' ? 'selected' : '' %>>Aguardando manifestacao</option>
+    </select>
+  </label>
+  <% if (empresas.length > 1) { %>
+    <label class="filtro">Cliente (CNPJ/CPF)
+      <select name="empresa">
+        <option value="">Todas</option>
+        <% empresas.forEach((e) => { %>
+          <option value="<%= e._id %>" <%= String(filtros.empresa) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
+        <% }) %>
+      </select>
+    </label>
+  <% } %>
+  <button class="btn btn-primary">Filtrar</button>
+  <a href="<%= base %>/notas" class="btn btn-ghost">Limpar</a>
+</form>
+
+<script>
+  // Mes + ano viram o parametro "mes=AAAA-MM"; so ano vira "ano=AAAA".
+  (function () {
+    var form = document.getElementById('form-filtros');
+    form.addEventListener('submit', function () {
+      var m = document.getElementById('sel-mes').value;
+      var a = document.getElementById('sel-ano');
+      var campoMes = document.getElementById('campo-mes');
+      if (m) {
+        var ano = a.value || String(new Date().getFullYear());
+        campoMes.value = ano + '-' + (m.length === 1 ? '0' + m : m);
+        a.disabled = true; // o mes ja inclui o ano
+      } else {
+        campoMes.value = '';
+      }
+      // nao envia campos vazios (URL mais limpa)
+      Array.prototype.forEach.call(form.elements, function (el) {
+        if (el.name && !el.value) el.disabled = true;
+      });
+    });
+  })();
+</script>
+
+<section class="cards totais">
+  <div class="card stat">
+    <span class="stat-label">Documentos no filtro</span>
+    <span class="stat-value"><%= totais.qtd %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Valor total (sem canceladas)</span>
+    <span class="stat-value">R$ <%= brl(totais.valor) %></span>
+  </div>
+  <% ['nfe', 'nfce', 'nfse', 'cte'].forEach((t) => { if (totais.porTipo[t]) { %>
+    <div class="card stat">
+      <span class="stat-label"><%= rotTipo[t] %> · <%= totais.porTipo[t].qtd %></span>
+      <span class="stat-value small-value">R$ <%= brl(totais.porTipo[t].valor) %></span>
+    </div>
+  <% } }) %>
+</section>
+
+<div class="card">
+  <div class="card-head">
+    <h2><%= paginacao.total %> documento(s)</h2>
+    <% if (paginacao.total > 0) { %>
+      <div class="row-actions">
+        <a href="<%= base %>/relatorios/excel?<%= qs({ page: '' }) %>" class="btn btn-sm">Excel</a>
+        <a href="<%= base %>/notas/exportar?<%= qs({ formato: 'pdf', page: '' }) %>" class="btn btn-sm">Baixar PDFs (ZIP)</a>
+        <a href="<%= base %>/notas/exportar?<%= qs({ formato: 'xml', page: '' }) %>" class="btn btn-sm">Baixar XMLs (ZIP)</a>
+        <a href="<%= base %>/notas/exportar?<%= qs({ formato: 'ambos', page: '' }) %>" class="btn btn-sm btn-primary">Baixar XML + PDF (ZIP)</a>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (notas.length === 0) { %>
+    <p class="muted">Nenhuma nota encontrada com esses filtros.</p>
+  <% } else { %>
+    <form method="post" action="<%= base %>/notas/lote" id="form-lote" class="barra-lote">
+      <span class="muted small"><span id="qtd-sel">0</span> selecionada(s)</span>
+      <button name="acao" value="baixar" class="btn btn-sm" disabled data-lote>Baixar selecionadas (XML + PDF)</button>
+      <% if (!locals.ehCliente) { %><button name="acao" value="ciencia" class="btn btn-sm" disabled data-lote title="Envia a Ciencia da Operacao e baixa o XML completo das notas que estao so com resumo">Dar ciencia nas selecionadas</button><% } %>
+    </form>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead>
+        <tr><th class="col-check"><input type="checkbox" id="sel-todas" title="Selecionar todas desta pagina" /></th><th>Tipo</th><th>Numero</th><th>Emitente / Prestador</th><th>Destinatario / Tomador</th><th>Valor</th><th>Emissao</th><th>Papel</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% notas.forEach((n) => { %>
+          <tr>
+            <td class="col-check"><input type="checkbox" name="ids" value="<%= n._id %>" form="form-lote" class="sel-nota" /></td>
+            <td>
+              <span class="tag tag-<%= n.tipo %>"><%= rotTipo[n.tipo] || n.tipo.toUpperCase() %></span>
+              <% if (n.resumo) { %> <span class="tag tag-warn" title="So o resumo da nota. De ciencia para baixar o XML completo.">resumo</span><% } %>
+              <% if (n.cancelada) { %> <span class="tag tag-err">cancelada</span><% } %>
+            </td>
+            <td><a href="<%= base %>/notas/<%= n._id %>" class="link" title="Ver detalhes"><%= n.numero || 'ver' %><% if (n.serie) { %>/<%= n.serie %><% } %></a></td>
+            <td><%= n.emitenteNome || n.emitenteCnpjCpf || '-' %></td>
+            <td><%= n.destinatarioNome || n.destinatarioCnpjCpf || '-' %></td>
+            <td class="nowrap">R$ <%= brl(n.valorTotal) %></td>
+            <td class="muted nowrap"><%= n.dataEmissao ? new Date(n.dataEmissao).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-' %></td>
+            <td class="small"><%= { emitente: 'prestada / emitida', destinatario: 'tomada / recebida' }[n.papel] || '-' %></td>
+            <td class="row-actions">
+              <% if (n.xmlApagadoEm) { %><span class="tag" title="Arquivo apagado do sistema conforme o plano">arquivo apagado</span><% } else { %>
+              <a href="<%= base %>/notas/<%= n._id %>/pdf" target="_blank" class="link">PDF</a>
+              <a href="<%= base %>/notas/<%= n._id %>/xml" class="link">XML</a>
+              <% } %>
+              <% if (!locals.ehCliente && n.resumo && (n.tipo === 'nfe' || n.tipo === 'nfce') && !n.cancelada) { %>
+                <form method="post" action="<%= base %>/notas/<%= n._id %>/ciencia" style="display:inline">
+                  <button class="btn btn-sm" title="<%= n.mensagemManifestacao || 'Envia a Ciencia da Operacao a SEFAZ e baixa o XML completo' %>">Baixar XML completo</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+    <script>
+      (function () {
+        var todas = document.getElementById('sel-todas');
+        var caixas = document.querySelectorAll('.sel-nota');
+        var botoes = document.querySelectorAll('[data-lote]');
+        var qtd = document.getElementById('qtd-sel');
+        function atualizar() {
+          var n = document.querySelectorAll('.sel-nota:checked').length;
+          qtd.textContent = n;
+          botoes.forEach(function (b) { b.disabled = n === 0; });
+          todas.checked = n > 0 && n === caixas.length;
+        }
+        todas.addEventListener('change', function () { caixas.forEach(function (c) { c.checked = todas.checked; }); atualizar(); });
+        caixas.forEach(function (c) { c.addEventListener('change', atualizar); });
+        document.getElementById('form-lote').addEventListener('submit', function (e) {
+          if (e.submitter && e.submitter.value === 'ciencia') {
+            e.submitter.textContent = 'Enviando...';
+          }
+        });
+      })();
+    </script>
+
+    <% if (paginacao.paginas > 1) { %>
+      <div class="pager">
+        <% const ini = Math.max(1, paginacao.page - 5), fim = Math.min(paginacao.paginas, paginacao.page + 5); %>
+        <% if (ini > 1) { %><a href="?<%= qs({ page: 1 }) %>" class="page">1</a><span class="muted">…</span><% } %>
+        <% for (let p = ini; p <= fim; p += 1) { %>
+          <a href="?<%= qs({ page: p }) %>" class="page <%= p === paginacao.page ? 'active' : '' %>"><%= p %></a>
+        <% } %>
+        <% if (fim < paginacao.paginas) { %><span class="muted">…</span><a href="?<%= qs({ page: paginacao.paginas }) %>" class="page"><%= paginacao.paginas %></a><% } %>
+      </div>
+    <% } %>
+  <% } %>
+</div>

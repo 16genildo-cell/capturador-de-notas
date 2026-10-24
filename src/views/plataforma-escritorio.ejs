@@ -1,0 +1,157 @@
+<%
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const fmtH = (d) => d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const tagStatus = { ativa: 'tag-ok', cortesia: 'tag-ok', teste: 'tag-warn', pendente: 'tag-warn', inadimplente: 'tag-err', cancelada: 'tag-err', suspensa: 'tag-err' };
+  const perfil = { admin: 'Administrador', operador: 'Equipe', cliente: 'Cliente do escritorio' };
+  const id = String(conta._id);
+  const ilimitado = limite === Infinity;
+%>
+<p><a class="link" href="/plataforma">&larr; Todos os escritorios</a></p>
+
+<section class="card" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center">
+  <div>
+    <h2 style="margin:0"><%= conta.nome %></h2>
+    <div class="muted small">
+      Responsavel: <%= dono ? dono.nome + ' · ' + dono.email : '-' %><%= conta.documento ? ' · ' + conta.documento : '' %><%= conta.telefone ? ' · ' + conta.telefone : '' %>
+    </div>
+    <div class="muted small">Criado em <%= fmt(conta.createdAt) %> · ultimo acesso do responsavel: <%= fmtH(dono && dono.ultimoLogin) %></div>
+    <% if (conta.observacao) { %><div class="small" style="margin-top:4px">Anotacao: <%= conta.observacao %></div><% } %>
+  </div>
+  <div class="row-actions">
+    <form method="post" action="/plataforma/escritorios/<%= id %>/acessar" class="inline" onsubmit="return confirm('Acessar o sistema como o escritorio <%= conta.nome.replace(/['"\\]/g, '') %>? O que fizer la vale para o escritorio.')">
+      <button class="btn btn-primary" <%= dono && dono.ativo ? '' : 'disabled title="Responsavel desativado"' %>>Acessar o escritorio</button>
+    </form>
+    <a class="btn" href="/plataforma/chat?conta=<%= id %>">Conversar no chat</a>
+    <% if (dono) { %><a class="btn" href="mailto:<%= dono.email %>">Enviar e-mail</a><% } %>
+  </div>
+</section>
+
+<section class="cards">
+  <div class="card stat">
+    <span class="stat-label">Situacao</span>
+    <span class="stat-value small-value"><span class="tag <%= tagStatus[conta.status] || '' %>"><%= conta.status %></span><% if (!acesso.liberado) { %> <span class="tag tag-err">bloqueado</span><% } %></span>
+    <span class="muted small"><%= ['teste', 'pendente'].includes(conta.status) ? 'Teste ate ' + fmt(conta.testeAte) : conta.pagoAte ? 'Pago ate ' + fmt(conta.pagoAte) : '' %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Plano</span>
+    <span class="stat-value small-value"><%= plano ? plano.nome : '-' %></span>
+    <span class="muted small"><%= plano ? brl(plano.preco) + ' · ' + plano.rotuloPeriodo.toLowerCase() : '' %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Clientes</span>
+    <span class="stat-value"><%= numeros.clientes %><span class="muted small"> / <%= ilimitado ? 'ilimitado' : limite %></span></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Notas capturadas</span>
+    <span class="stat-value"><%= numeros.notas.toLocaleString('pt-BR') %></span>
+    <span class="muted small"><%= numeros.notas30.toLocaleString('pt-BR') %> nos ultimos 30 dias · <%= numeros.usuarios %> usuario(s)</span>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Ajustes</h2></div>
+  <div class="ajustes-conta" style="display:flex;flex-wrap:wrap;gap:8px 16px">
+    <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+      <input type="hidden" name="acao" value="status" />
+      <select name="status"><% STATUS.forEach((s) => { %><option <%= conta.status === s ? 'selected' : '' %>><%= s %></option><% }) %></select>
+      <button class="btn btn-sm">Mudar situacao</button>
+    </form>
+    <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+      <input type="hidden" name="acao" value="plano" />
+      <select name="plano"><option value="">sem plano</option><% planos.forEach((p) => { %><option value="<%= p.id %>" <%= conta.plano === p.id ? 'selected' : '' %>><%= p.nome %> (<%= p.empresas == null ? 'ilimitado' : p.empresas + ' clientes' %>)</option><% }) %></select>
+      <button class="btn btn-sm">Mudar plano</button>
+    </form>
+    <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+      <input type="hidden" name="acao" value="estender-teste" />
+      <input type="number" name="dias" value="7" min="1" max="365" style="width:80px" />
+      <button class="btn btn-sm">Estender teste (dias)</button>
+    </form>
+    <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini">
+      <input type="hidden" name="acao" value="limite" />
+      <input type="number" name="limite" min="0" placeholder="do plano" value="<%= conta.limiteEmpresasManual ?? '' %>" style="width:100px" />
+      <button class="btn btn-sm">Limite de clientes</button>
+    </form>
+    <form method="post" action="/plataforma/contas/<%= id %>" class="form form-mini" style="flex:1;min-width:260px">
+      <input type="hidden" name="acao" value="observacao" />
+      <input type="text" name="observacao" placeholder="anotacao interna" value="<%= conta.observacao || '' %>" />
+      <button class="btn btn-sm">Salvar anotacao</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Clientes do escritorio (<%= empresas.length %>)</h2></div>
+  <% if (!empresas.length) { %>
+    <p class="muted">Nenhum cliente cadastrado ainda.</p>
+  <% } else { %>
+  <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Cliente</th><th>CNPJ/CPF</th><th>UF</th><th>Certificado</th><th>Notas</th><th>Ultima nota</th></tr></thead>
+      <tbody>
+        <% empresas.forEach((e) => { %>
+          <tr>
+            <td><strong><%= e.razaoSocial %></strong><% if (e.ativa === false) { %> <span class="tag">inativo</span><% } %></td>
+            <td class="nowrap"><%= e.cnpj %></td>
+            <td><%= e.uf || '-' %></td>
+            <td class="small">
+              <% if (!e.certificado) { %><span class="tag tag-warn">sem certificado</span>
+              <% } else if (e.certVencido) { %><span class="tag tag-err">vencido em <%= fmt(e.certificado.validoAte) %></span>
+              <% } else { %><span class="tag <%= e.certDias <= 30 ? 'tag-warn' : 'tag-ok' %>">ate <%= fmt(e.certificado.validoAte) %></span><% } %>
+            </td>
+            <td><%= e.notas.toLocaleString('pt-BR') %></td>
+            <td class="small muted nowrap"><%= fmt(e.ultimaNota) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Equipe e acessos (<%= usuarios.length %>)</h2></div>
+    <table class="table">
+      <thead><tr><th>Nome</th><th>Perfil</th><th>Ve</th><th>Ultimo acesso</th></tr></thead>
+      <tbody>
+        <% usuarios.forEach((u) => { %>
+          <tr>
+            <td><strong><%= u.nome %></strong><% if (String(u._id) === id) { %> <span class="muted small">responsavel</span><% } %><% if (!u.ativo) { %> <span class="tag tag-err">desativado</span><% } %><div class="muted small"><%= u.email %></div></td>
+            <td class="small"><%= perfil[u.role] || u.role %></td>
+            <td class="small"><%= u.clientesQueVe === 'todos' ? 'todos' : u.clientesQueVe.length + ' cliente(s)' %></td>
+            <td class="small muted nowrap"><%= fmtH(u.ultimoLogin) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Ultimas capturas</h2></div>
+    <% if (!logs.length) { %>
+      <p class="muted">Nenhuma captura ainda.</p>
+    <% } else { %>
+      <ul class="log-list">
+        <% logs.forEach((l) => { %>
+          <li><span class="tag <%= l.status === 'sucesso' ? 'tag-ok' : l.status === 'erro' ? 'tag-err' : 'tag-warn' %>"><%= l.tipo %></span>
+            <span class="muted small"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= fmtH(l.createdAt) %></span>
+            <% if (l.mensagem) { %><div class="small"><%= l.mensagem %></div><% } %></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Cobranca</h2></div>
+  <p class="muted small">
+    <%= conta.asaas && conta.asaas.subscriptionId ? 'Assinatura no Asaas: ' + conta.asaas.subscriptionId : 'Sem assinatura no Asaas (plano definido manualmente).' %>
+  </p>
+  <% if (eventos.length) { %>
+    <ul class="log-list">
+      <% eventos.forEach((e) => { %>
+        <li><span class="tag <%= /RECEIVED|CONFIRMED/.test(e.evento) ? 'tag-ok' : /OVERDUE|DELETED|REFUND|CHARGEBACK/.test(e.evento) ? 'tag-err' : '' %>"><%= e.evento %></span> <span class="muted small"><%= fmtH(e.createdAt) %></span></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>

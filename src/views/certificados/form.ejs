@@ -1,0 +1,21 @@
+<div class="card card-form">
+  <form method="post" action="/certificados" enctype="multipart/form-data" class="form">
+    <label>Apelido
+      <input type="text" name="apelido" placeholder="Ex: Matriz 2026" />
+    </label>
+    <label>Arquivo do certificado (.pfx / .p12) *
+      <input type="file" name="pfx" accept=".pfx,.p12" required />
+    </label>
+    <label>Senha do certificado *
+      <input type="password" name="senha" required />
+    </label>
+    <p class="muted small">
+      O arquivo e a senha sao criptografados (AES-256-GCM) antes de serem guardados no banco.
+      Nada e salvo em texto puro.
+    </p>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Enviar e validar</button>
+      <a href="/certificados" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+</div>

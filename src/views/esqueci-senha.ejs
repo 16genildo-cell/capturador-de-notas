@@ -1,0 +1,12 @@
+<h1>Recuperar senha</h1>
+<p class="sub">Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha.</p>
+<% if (!emailAtivo) { %>
+  <div class="ent-aviso info" style="margin-bottom:16px">O envio de e-mails não está configurado. Peça ao administrador do seu escritório para redefinir a sua senha em Usuários.</div>
+<% } %>
+<form method="post" action="/esqueci-senha" class="ent-form">
+  <label>E-mail da sua conta
+    <input type="email" name="email" required autofocus autocomplete="username" />
+  </label>
+  <button type="submit" class="bt bt-azul">Enviar link</button>
+</form>
+<div class="ent-rodape"><a href="/login">Voltar para o login</a></div>

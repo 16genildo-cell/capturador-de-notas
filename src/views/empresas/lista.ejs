@@ -1,0 +1,47 @@
+<% if (locals.ehAdmin) { %>
+<div class="page-actions">
+  <a href="/empresas/nova" class="btn btn-primary">+ Novo cliente</a>
+</div>
+<% } %>
+
+<% if (empresas.length === 0) { %>
+  <div class="card"><p class="muted">Nenhum cliente cadastrado ainda. Cadastre cada cliente do escritorio (CNPJ ou CPF) com o certificado digital dele.</p></div>
+<% } else { %>
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr><th>Razao social / Nome</th><th>CNPJ / CPF</th><th>UF</th><th>Certificado</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% empresas.forEach((e) => { %>
+          <tr>
+            <td><a href="/empresas/<%= e._id %>" class="link"><strong><%= e.razaoSocial %></strong></a><% if (e.nomeFantasia) { %><br><span class="muted"><%= e.nomeFantasia %></span><% } %></td>
+            <td><%= e.cnpjFormatado %><% if (e.tipoPessoa === 'PF') { %> <span class="tag tag-nfse">pessoa fisica</span><% } %></td>
+            <td><%= e.uf %></td>
+            <td>
+              <% if (e.certificado) { %>
+                <span class="tag tag-ok">vinculado</span>
+              <% } else { %>
+                <span class="tag tag-warn">sem certificado</span>
+              <% } %>
+            </td>
+            <td class="row-actions">
+              <a href="/empresas/<%= e._id %>" class="btn btn-sm btn-primary">Abrir</a>
+              <% if (!locals.ehCliente) { %>
+              <form method="post" action="/empresas/<%= e._id %>/capturar" style="display:inline">
+                <button class="btn btn-sm">Capturar agora</button>
+              </form>
+              <% } %>
+              <% if (locals.ehAdmin) { %>
+              <a href="/empresas/<%= e._id %>/editar" class="btn btn-sm btn-ghost">Editar</a>
+              <form method="post" action="/empresas/<%= e._id %>/excluir" style="display:inline" onsubmit="return confirm('Remover este cliente do escritorio?')">
+                <button class="btn btn-sm btn-danger">Excluir</button>
+              </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>

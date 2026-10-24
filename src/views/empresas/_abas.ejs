@@ -1,0 +1,94 @@
+<%
+  const eA = empresaAtual;
+  const p = currentPath.replace(/\/+$/, '');
+  const b = base;
+  const certVence = eA.certificado && eA.certificado.validoAte ? new Date(eA.certificado.validoAte) : null;
+  const certVencido = certVence && certVence.getTime() < Date.now();
+  const certDias = certVence ? Math.ceil((certVence.getTime() - Date.now()) / 864e5) : null;
+  const abas = [
+    ['Visão geral', b, p === b],
+    ['Notas fiscais', b + '/notas', p.startsWith(b + '/notas')],
+    ['Captura', b + '/captura', p.startsWith(b + '/captura')],
+    ['Emitir NFS-e', b + '/emitir', p.startsWith(b + '/emitir') && !p.startsWith(b + '/emitir/servicos') && !p.startsWith(b + '/emitir/configurar')],
+    ['Serviços', b + '/emitir/servicos', p.startsWith(b + '/emitir/servicos')],
+    ['Vender (NF-e / NFC-e)', b + '/vendas', p.startsWith(b + '/vendas') && !p.startsWith(b + '/vendas/produtos') && !p.startsWith(b + '/vendas/configurar')],
+    ['Produtos', b + '/vendas/produtos', p.startsWith(b + '/vendas/produtos')],
+    ['Relatórios', b + '/relatorios', p.startsWith(b + '/relatorios')],
+  ];
+  // Cliente do escritorio: so consulta (visao geral, notas e relatorios).
+  if (locals.ehCliente) {
+    for (let i = abas.length - 1; i >= 0; i -= 1) if (!['Visão geral', 'Notas fiscais', 'Relatórios'].includes(abas[i][0])) abas.splice(i, 1);
+  }
+  // Abas de funcionalidades que o plano do escritorio nao inclui ficam escondidas.
+  const temAba = (id) => !locals.recursos || locals.recursos.includes(id);
+  const recursoDaAba = { 'Emitir NFS-e': 'emissao_nfse', 'Serviços': 'emissao_nfse', 'Vender (NF-e / NFC-e)': 'emissao_nfe', 'Produtos': 'emissao_nfe', 'Relatórios': 'relatorios' };
+  for (let i = abas.length - 1; i >= 0; i -= 1) if (recursoDaAba[abas[i][0]] && !temAba(recursoDaAba[abas[i][0]])) abas.splice(i, 1);
+  if (locals.ehAdmin) {
+    if (temAba('importar_xml')) abas.push(['Importar XML', b + '/importar', p.startsWith(b + '/importar')]);
+    abas.push(['Configurações', b + '/editar', p.startsWith(b + '/editar') || p.startsWith(b + '/emitir/configurar') || p.startsWith(b + '/vendas/configurar')]);
+  }
+%>
+<section class="empresa-topo">
+  <div class="et-ident-wrapper">
+    <div class="et-avatar" title="<%= eA.razaoSocial %>">
+      <%= (eA.razaoSocial || 'E').charAt(0).toUpperCase() %>
+    </div>
+    <div class="et-ident">
+      <div class="et-title-row">
+        <a href="<%= b %>" class="et-nome"><%= eA.razaoSocial %></a>
+        <span class="mono et-badge-doc">
+          <%= eA.cnpjFormatado %>
+          <% if (eA.tipoPessoa === 'PF') { %><span class="et-pf-tag">PF</span><% } %>
+        </span>
+      </div>
+      <div class="et-meta muted small">
+        <% if (eA.nomeFantasia) { %><span><%= eA.nomeFantasia %> · </span><% } %>
+        <span><%= eA.municipioNome ? eA.municipioNome + '/' : '' %><%= eA.uf || 'UF' %></span>
+        <% if (eA.inscricaoEstadual) { %><span> · IE: <%= eA.inscricaoEstadual %></span><% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="et-status">
+    <% if (!eA.certificado) { %>
+      <span class="tag tag-warn tag-status-pill" title="Nenhum certificado A1 vinculado">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Sem certificado
+      </span>
+    <% } else if (certVencido) { %>
+      <span class="tag tag-err tag-status-pill" title="Certificado digital A1 expirado">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        Certificado vencido
+      </span>
+    <% } else { %>
+      <span class="tag <%= certDias <= 30 ? 'tag-warn' : 'tag-ok' %> tag-status-pill" title="Certificado <%= eA.certificado.apelido %>">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        A1 válido até <%= certVence ? certVence.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-' %>
+      </span>
+    <% } %>
+
+    <% if (eA.emissaoNfse && eA.emissaoNfse.ativa) { %>
+      <span class="tag <%= eA.emissaoNfse.ambiente === 'producao' ? 'tag-ok' : 'tag-warn' %> tag-status-pill">
+        NFS-e: <%= eA.emissaoNfse.ambiente === 'producao' ? 'Produção' : 'Homologação' %>
+      </span>
+    <% } %>
+
+    <% if (!locals.ehCliente) { %>
+    <form method="post" action="<%= b %>/capturar" class="inline" onsubmit="var x=this.querySelector('button');x.disabled=true;x.classList.add('loading');">
+      <button class="btn btn-sm btn-primary btn-capturar-topo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        <span>Capturar agora</span>
+      </button>
+    </form>
+    <% } %>
+  </div>
+</section>
+
+<nav class="abas-empresa" aria-label="Navegação da empresa">
+  <% abas.forEach(([rot, href, ativa]) => { %>
+    <a href="<%= href %>" class="aba-item <%= ativa ? 'active' : '' %>">
+      <%= rot %>
+    </a>
+  <% }) %>
+</nav>
+

@@ -1,0 +1,45 @@
+<% const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+<div class="page-actions row-actions">
+  <a href="<%= base %>/vendas<%= !locals.empresaAtual && empresaSel ? '?empresa=' + empresaSel._id : '' %>" class="btn btn-ghost">Voltar para a venda</a>
+  <% if (empresaSel && locals.ehAdmin) { %><a href="<%= base %>/vendas/produtos/novo?empresa=<%= empresaSel._id %>" class="btn btn-primary">+ Novo produto</a><% } %>
+</div>
+
+<% if (empresas.length > 1 && !locals.empresaAtual) { %>
+  <nav class="chips">
+    <% empresas.forEach((e) => { %>
+      <a href="/vendas/produtos?empresa=<%= e._id %>" class="chip <%= empresaSel && String(e._id) === String(empresaSel._id) ? 'active' : '' %>"><%= e.razaoSocial %></a>
+    <% }) %>
+  </nav>
+<% } %>
+
+<section class="card">
+  <div class="card-head"><h2>Produtos de <%= empresaSel ? empresaSel.razaoSocial : '-' %></h2><span class="muted small"><%= produtos.length %> produto(s)</span></div>
+  <% if (!produtos.length) { %>
+    <p class="muted">Nenhum produto cadastrado. Cadastre com NCM, CFOP e CSOSN (confira com o contador) e depois e so escolher na hora da venda.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Codigo</th><th>Descricao</th><th>NCM</th><th>CFOP</th><th>CSOSN</th><th class="dir">Preco</th><th>Vendidos</th><th></th></tr></thead>
+      <tbody>
+        <% produtos.forEach((p) => { %>
+          <tr>
+            <td class="small"><%= p.codigo %></td>
+            <td><strong><%= p.descricao %></strong><% if (!p.ativo) { %> <span class="tag tag-warn">inativo</span><% } %><% if (p.gtin) { %><div class="muted small">GTIN <%= p.gtin %></div><% } %></td>
+            <td class="small"><%= p.ncm %></td>
+            <td class="small"><%= p.cfop %></td>
+            <td class="small" title="<%= CSOSN[p.csosn] %>"><%= p.csosn %></td>
+            <td class="dir nowrap">R$ <%= brl(p.preco) %> <span class="muted small">/<%= p.unidade %></span></td>
+            <td class="small"><%= Number(p.totalVendido || 0).toLocaleString('pt-BR') %></td>
+            <td class="row-actions">
+              <% if (locals.ehAdmin) { %>
+                <a href="<%= base %>/vendas/produtos/<%= p._id %>/editar" class="btn btn-sm btn-ghost">Editar</a>
+                <form method="post" action="<%= base %>/vendas/produtos/<%= p._id %>/excluir" class="inline" onsubmit="return confirm('Excluir este produto? As notas ja emitidas nao mudam.')"><button class="btn btn-sm btn-danger">Excluir</button></form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>

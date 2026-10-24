@@ -1,0 +1,16 @@
+<h1>Entrar</h1>
+<p class="sub">Acesse o painel do seu escritório.</p>
+<form method="post" action="/login" class="ent-form">
+  <label>E-mail
+    <input type="email" name="email" required autofocus autocomplete="username" />
+  </label>
+  <label>Senha
+    <input type="password" name="senha" required autocomplete="current-password" />
+  </label>
+  <button type="submit" class="bt bt-azul">Entrar</button>
+</form>
+<div class="ent-rodape">
+  <a href="/esqueci-senha">Esqueci a senha</a>
+  <% if (locals.cadastroAberto) { %><span>Ainda não tem conta? <a href="/registrar">Teste grátis</a></span>
+  <% } else { %><span>Ainda não tem acesso? <a href="/#contato">Fale com a nossa equipe</a></span><% } %>
+</div>

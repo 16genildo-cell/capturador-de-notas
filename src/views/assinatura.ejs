@@ -1,0 +1,93 @@
+<%
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const ilimitado = limite === Infinity;
+  const pct = ilimitado ? 0 : Math.min(100, Math.round((empresasUsadas / Math.max(1, limite)) * 100));
+  const temAssinatura = Boolean(conta.asaas && conta.asaas.subscriptionId);
+  const precisaPagar = ['pendente', 'inadimplente'].includes(conta.status) || (!acesso.liberado && temAssinatura);
+%>
+<% (locals.avisos || []).forEach((a) => { %>
+<div class="flash <%= a.tipo === 'importante' ? 'flash-erro' : 'flash-info' %>" style="white-space:pre-wrap">
+  <strong><%= a.tipo === 'manutencao' ? 'Manutencao programada: ' : '' %><%= a.titulo %></strong><% if (a.texto) { %><br><%= a.texto %><% } %>
+</div>
+<% }) %>
+
+<section class="cards">
+  <div class="card stat">
+    <span class="stat-label">Situacao</span>
+    <span class="stat-value small-value"><span class="tag <%= rotuloStatus[1] %>"><%= rotuloStatus[0] %></span></span>
+    <span class="muted small">
+      <% if (conta.status === 'teste' || conta.status === 'pendente') { %>Teste ate <%= fmt(conta.testeAte) %>
+      <% } else if (conta.pagoAte) { %>Pago ate <%= fmt(conta.pagoAte) %>
+      <% } else if (conta.status === 'cortesia') { %>Sem cobranca<% } %>
+    </span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Plano</span>
+    <span class="stat-value small-value"><%= planoAtual ? planoAtual.nome : (conta.status === 'cortesia' ? 'Cortesia' : 'Teste gratis') %></span>
+    <span class="muted small"><%= planoAtual ? brl(planoAtual.preco) + ' · ' + planoAtual.rotuloPeriodo.toLowerCase() : '' %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Clientes (CNPJ/CPF)</span>
+    <span class="stat-value"><%= empresasUsadas %><span class="muted small"> / <%= ilimitado ? 'ilimitado' : limite %></span></span>
+    <% if (!ilimitado) { %><div class="barra-uso" title="<%= pct %>%"><span style="width: <%= pct %>%" class="<%= pct >= 100 ? 'cheia' : '' %>"></span></div><% } %>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Usuarios</span>
+    <span class="stat-value"><%= usuarios %></span>
+    <% const limU = conta.limiteUsuariosManual ?? (planoAtual && planoAtual.usuarios); %>
+    <span class="muted small"><%= limU ? `equipe: ate ${limU} usuario(s)` : 'equipe ilimitada' %></span>
+  </div>
+</section>
+
+<% if (precisaPagar) { %>
+  <section class="card aviso-pagamento">
+    <div>
+      <h2><%= conta.status === 'pendente' ? 'Falta pouco: confirme o pagamento' : 'Ha uma fatura em aberto' %></h2>
+      <p class="muted">Pague por Pix, boleto ou cartao. A liberacao e automatica assim que o pagamento for confirmado.</p>
+    </div>
+    <a class="btn btn-primary" href="/assinatura/pagar">Abrir fatura</a>
+  </section>
+<% } %>
+
+<section class="card" id="planos">
+  <div class="card-head"><h2>Contratar ou mudar de plano</h2></div>
+  <p class="muted">A contratacao, a troca de plano e o cancelamento sao feitos com a nossa equipe.<%= planoAtual ? ` Seu plano atual e o ${planoAtual.nome} (${planoAtual.empresas == null ? 'clientes ilimitados' : `ate ${planoAtual.empresas} clientes`}).` : '' %></p>
+  <% if (emailSuporte) { %>
+    <a class="btn btn-primary" href="mailto:<%= emailSuporte %>?subject=<%= encodeURIComponent('Plano do escritorio ' + conta.nome) %>">Falar com a equipe</a>
+    <span class="muted small" style="margin-left:8px"><%= emailSuporte %></span>
+  <% } else { %>
+    <p class="muted small">Fale com o suporte para contratar.</p>
+  <% } %>
+</section>
+
+<% if (locals.ehAdmin) { %>
+<section class="card" id="dados">
+  <div class="card-head"><h2>Dados do escritorio</h2></div>
+  <form method="post" action="/assinatura/dados" class="form">
+    <div class="form-row">
+      <label>Nome do escritorio
+        <input type="text" name="nome" required value="<%= conta.nome %>" />
+      </label>
+      <label>CNPJ/CPF de cobranca
+        <input type="text" name="documento" inputmode="numeric" value="<%= conta.documento || '' %>" <%= temAssinatura ? 'readonly' : '' %> />
+      </label>
+    </div>
+    <div class="form-row">
+      <label>E-mail de cobranca
+        <input type="email" name="emailCobranca" value="<%= conta.emailCobranca || '' %>" />
+      </label>
+      <label>Celular
+        <input type="tel" name="telefone" value="<%= conta.telefone || '' %>" />
+      </label>
+    </div>
+    <label>Quem recebe os alertas (certificado vencendo, notas novas, prazos). Separe por virgula; vazio = administradores do escritorio.
+      <input type="text" name="alertasPara" value="<%= (conta.config && conta.config.alertasPara || []).join(', ') %>" />
+    </label>
+    <label class="check-termos">
+      <input type="checkbox" name="cienciaAutomatica" <%= conta.config && conta.config.cienciaAutomatica ? 'checked' : '' %> />
+      <span>Enviar a <strong>Ciencia da Operacao</strong> automaticamente a cada captura (libera o XML completo das NF-e recebidas).</span>
+    </label>
+    <div class="form-actions"><button class="btn btn-primary">Salvar</button></div>
+  </form>
+</section>
+<% } %>

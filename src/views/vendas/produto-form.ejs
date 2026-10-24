@@ -1,0 +1,53 @@
+<% const sel = (a, b) => (String(a) === String(b) ? 'selected' : ''); const preco = typeof p.preco === 'number' ? String(p.preco.toFixed(2)).replace('.', ',') : (p.preco || ''); %>
+<form method="post" action="<%= base %><%= p._id ? '/vendas/produtos/' + p._id : '/vendas/produtos' %>" class="form">
+  <input type="hidden" name="empresa" value="<%= empresa._id %>" />
+  <section class="card">
+    <div class="card-head"><h2>Produto de <%= empresa.razaoSocial %></h2></div>
+    <div class="form-row">
+      <label>Codigo interno * <input type="text" name="codigo" value="<%= p.codigo || '' %>" maxlength="60" required /></label>
+      <label>Codigo de barras (GTIN/EAN) <input type="text" name="gtin" value="<%= p.gtin || '' %>" inputmode="numeric" placeholder="vazio = SEM GTIN" /></label>
+    </div>
+    <label>Descricao * <input type="text" name="descricao" value="<%= p.descricao || '' %>" maxlength="120" required /></label>
+    <div class="form-row">
+      <label>Preco de venda (R$) * <input type="text" name="preco" value="<%= preco %>" inputmode="decimal" required /></label>
+      <label>Unidade <input type="text" name="unidade" value="<%= p.unidade || 'UN' %>" maxlength="6" placeholder="UN, KG, CX, PC..." /></label>
+    </div>
+    <label>Situacao
+      <select name="ativo"><option value="on">Ativo (aparece na venda)</option><option value="off" <%= p.ativo === false ? 'selected' : '' %>>Inativo</option></select>
+    </label>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Classificacao fiscal</h2></div>
+    <p class="muted small">Confira NCM, CFOP e CSOSN com o contador: sao eles que definem o imposto da nota.</p>
+    <div class="form-row">
+      <label>NCM * (8 digitos) <input type="text" name="ncm" value="<%= p.ncm || '' %>" inputmode="numeric" required placeholder="ex.: 61091000" /></label>
+      <label>CEST (se houver ST) <input type="text" name="cest" value="<%= p.cest || '' %>" inputmode="numeric" placeholder="7 digitos" /></label>
+    </div>
+    <label>CFOP (venda dentro do estado)
+      <select name="cfop">
+        <% Object.entries(CFOPS).forEach(([k, n]) => { %><option value="<%= k %>" <%= sel(p.cfop || '5102', k) %>><%= n %></option><% }) %>
+      </select>
+    </label>
+    <div class="form-row">
+      <label>CSOSN (Simples Nacional)
+        <select name="csosn">
+          <% Object.entries(CSOSN).forEach(([k, n]) => { %><option value="<%= k %>" <%= sel(p.csosn || '102', k) %>><%= k %> - <%= n %></option><% }) %>
+        </select>
+      </label>
+      <label>Origem da mercadoria
+        <select name="origem">
+          <% Object.entries(ORIGENS).forEach(([k, n]) => { %><option value="<%= k %>" <%= sel(p.origem || '0', k) %>><%= n %></option><% }) %>
+        </select>
+      </label>
+    </div>
+    <label>Tributos aproximados (%) - Lei 12.741 / tabela IBPT (opcional)
+      <input type="text" name="pTotTrib" value="<%= p.pTotTrib || '' %>" inputmode="decimal" placeholder="ex.: 31,45" />
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-primary">Salvar</button>
+      <% if (!p._id) { %><button class="btn" name="depois" value="novo">Salvar e cadastrar outro</button><% } %>
+      <a href="<%= base %>/vendas/produtos<%= locals.empresaAtual ? '' : '?empresa=' + empresa._id %>" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </section>
+</form>

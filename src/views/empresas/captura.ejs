@@ -1,0 +1,62 @@
+<%
+  const dataHora = (d) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
+  const tagLog = (s) => (s === 'sucesso' ? 'ok' : s === 'erro' ? 'err' : 'warn');
+  const cap = empresa.captura || {};
+  const nsu = { nfe: empresa.ultimoNSU, nfse: empresa.ultimoNSUNfse, cte: empresa.ultimoNSUCte };
+  const oQue = { nfe: 'notas de produtos (NF-e) em que a empresa aparece', nfse: 'notas de servico do Ambiente Nacional, prestadas e tomadas', cte: 'conhecimentos de transporte (CT-e)' };
+%>
+
+<% if (config.ambiente !== 'producao') { %>
+  <div class="flash flash-info">A SEFAZ esta em <strong>homologacao (testes)</strong>: nao existem notas reais. Para capturar as notas da empresa, use SEFAZ_AMBIENTE=producao no .env.</div>
+<% } %>
+
+<section class="card">
+  <div class="card-head">
+    <h2>O que e capturado</h2>
+    <% if (locals.ehAdmin) { %><a href="<%= base %>/editar" class="link">alterar</a><% } %>
+  </div>
+  <div class="status-captura">
+    <% ['nfe', 'nfse', 'cte'].forEach((t) => { const l = capturas[t]; const ligado = cap[t] !== false; %>
+      <div class="sc-item">
+        <span><strong><%= ROT_TIPO[t] %></strong> <span class="tag <%= ligado ? 'tag-ok' : 'tag-warn' %>"><%= ligado ? 'ligado' : 'desligado' %></span></span>
+        <span class="muted small"><%= oQue[t] %></span>
+        <span class="small">Ultimo NSU: <%= nsu[t] || '0' %></span>
+        <% if (l) { %>
+          <span class="small"><span class="tag tag-<%= tagLog(l.status) %>"><%= l.status %></span> <%= dataHora(l.createdAt) %> · <%= l.novos %> novo(s)</span>
+          <span class="small muted"><%= l.mensagem || '' %></span>
+        <% } else { %>
+          <span class="muted small">Ainda nao capturado.</span>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+  <p class="muted small">
+    <% if (config.agendador) { %>Captura automatica ligada (<code><%= config.cron %></code>). <% } else { %>Captura automatica desligada: use o botao <strong>Capturar agora</strong>. <% } %>
+    Pela regra da SEFAZ, se nao houver nada novo a proxima consulta de NF-e so pode ser feita 1 hora depois.
+  </p>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Historico</h2></div>
+  <% if (logs.length === 0) { %>
+    <p class="muted">Nenhuma captura registrada para esta empresa.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Quando</th><th>Tipo</th><th>Situacao</th><th>Novos</th><th>Mensagem</th><th>Origem</th></tr></thead>
+      <tbody>
+        <% logs.forEach((l) => { %>
+          <tr>
+            <td class="muted small nowrap"><%= dataHora(l.createdAt) %></td>
+            <td><%= ROT_TIPO[l.tipo] || l.tipo %></td>
+            <td><span class="tag tag-<%= tagLog(l.status) %>"><%= l.status %></span><% if (l.cStat) { %> <span class="muted small"><%= l.cStat %></span><% } %></td>
+            <td><%= l.novos %></td>
+            <td class="small"><%= l.mensagem || '' %><% if (l.detalhe) { %><div class="muted"><%= l.detalhe.slice(0, 200) %></div><% } %></td>
+            <td class="small muted"><%= l.origem === 'agendado' ? 'automatica' : 'manual' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>

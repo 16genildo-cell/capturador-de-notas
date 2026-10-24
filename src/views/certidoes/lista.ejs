@@ -1,0 +1,161 @@
+<%
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const tagStatus = { valida: 'tag-ok', vencendo: 'tag-warn', vencida: 'tag-err', sem_validade: 'tag-warn' };
+  const txtStatus = { valida: 'valida', vencendo: 'vence em breve', vencida: 'vencida', sem_validade: 'sem validade' };
+  const tagSit = { negativa: 'tag-ok', positiva_efeito_negativa: 'tag-ok', positiva: 'tag-err', nao_emitida: 'tag-err' };
+%>
+
+<% if (alertas.vencidas || alertas.vencendo) { %>
+  <div class="flash flash-erro">
+    <% if (alertas.vencidas) { %><strong><%= alertas.vencidas %> certidao(oes) vencida(s).</strong> <% } %>
+    <% if (alertas.vencendo) { %><strong><%= alertas.vencendo %> vence(m) nos proximos 15 dias.</strong><% } %>
+  </div>
+<% } %>
+
+<section class="card">
+  <div class="card-head"><h2>Situacao atual</h2></div>
+  <% if (linhas.length === 0) { %>
+    <p class="muted">Cadastre uma empresa ou pessoa para controlar as certidoes.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead>
+        <tr><th>Empresa / pessoa</th><% Object.entries(ESFERAS).forEach(([k, nome]) => { %><th><%= nome %></th><% }) %></tr>
+      </thead>
+      <tbody>
+        <% linhas.forEach((l) => { %>
+          <tr>
+            <td>
+              <strong><%= l.razaoSocial %></strong><br><span class="muted small"><%= l.documento %> · <%= l.uf %></span>
+              <details class="links-cert">
+                <summary class="small link">links estadual/municipal</summary>
+                <form method="post" action="/certidoes/links/<%= l._id %>" class="form form-mini">
+                  <input type="url" name="estadual" value="<%= (l.linksCertidao && l.linksCertidao.estadual) || '' %>" placeholder="Site da certidao estadual (SEFAZ <%= l.uf %>)" />
+                  <input type="url" name="municipal" value="<%= (l.linksCertidao && l.linksCertidao.municipal) || '' %>" placeholder="Site da certidao municipal" />
+                  <button class="btn btn-sm">Salvar links</button>
+                </form>
+              </details>
+            </td>
+            <% Object.keys(ESFERAS).forEach((esfera) => { const c = l.atuais[esfera]; %>
+              <td class="cel-cert">
+                <% if (esfera === 'fgts' && l.pf) { %>
+                  <span class="muted small">nao se aplica a pessoa fisica</span>
+                <% } else { %>
+                  <% if (c) { %>
+                    <span class="tag <%= tagSit[c.situacao] %>"><%= SITUACOES[c.situacao] %></span>
+                    <% if (c.situacao !== 'nao_emitida') { %>
+                      <div class="small"><span class="tag <%= tagStatus[c.status] %>"><%= txtStatus[c.status] %></span> ate <%= fmt(c.dataValidade) %></div>
+                    <% } else if (c.mensagem) { %>
+                      <div class="small muted"><%= c.mensagem %></div>
+                    <% } %>
+                    <% if (c.temPdf) { %><a href="/certidoes/<%= c._id %>/pdf" target="_blank" class="link small">ver PDF</a><% } %>
+                  <% } else { %>
+                    <span class="muted small">nenhuma</span>
+                  <% } %>
+                  <div class="acoes-cert">
+                    <% if (esfera === 'federal' && serpro) { %>
+                      <form method="post" action="/certidoes/federal/<%= l._id %>" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Emitindo...'">
+                        <button class="btn btn-sm btn-primary">Emitir agora</button>
+                      </form>
+                    <% } else if (l.links[esfera]) { %>
+                      <a href="<%= l.links[esfera] %>" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">Emitir no site</a>
+                    <% } %>
+                  </div>
+                <% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Enviar certidao (PDF)</h2></div>
+    <p class="muted small">Baixou a certidao no site do orgao? Envie aqui para controlar a validade e receber o alerta de vencimento.</p>
+    <form method="post" action="/certidoes/enviar" enctype="multipart/form-data" class="form">
+      <div class="form-row">
+        <label>Empresa / pessoa
+          <select name="empresa" required>
+            <% linhas.forEach((l) => { %><option value="<%= l._id %>"><%= l.razaoSocial %></option><% }) %>
+          </select>
+        </label>
+        <label>Tipo
+          <select name="esfera" required>
+            <% Object.entries(ESFERAS).forEach(([k, nome]) => { %><option value="<%= k %>"><%= nome %></option><% }) %>
+          </select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Situacao
+          <select name="situacao">
+            <% Object.entries(SITUACOES).filter(([k]) => k !== 'nao_emitida').forEach(([k, nome]) => { %><option value="<%= k %>"><%= nome %></option><% }) %>
+          </select>
+        </label>
+        <label>Codigo de controle (opcional)
+          <input type="text" name="codigoControle" />
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Data de emissao <input type="date" name="dataEmissao" /></label>
+        <label>Valida ate * <input type="date" name="dataValidade" required /></label>
+      </div>
+      <label>Arquivo PDF * <input type="file" name="pdf" accept="application/pdf,.pdf" required /></label>
+      <div class="form-actions"><button class="btn btn-primary">Salvar certidao</button></div>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Emissao automatica</h2></div>
+    <% if (serpro) { %>
+      <p><span class="tag tag-ok">ativa</span> Certidao <strong>federal</strong> pela API oficial do Serpro.</p>
+      <p class="muted small">O sistema renova sozinho, uma vez por dia, as certidoes federais que vencem nos proximos 15 dias.</p>
+    <% } else { %>
+      <p><span class="tag tag-warn">nao configurada</span></p>
+      <p class="muted small">
+        A certidao <strong>federal</strong> pode ser emitida automaticamente pela API oficial
+        <strong>"Consulta CND"</strong> do Serpro (paga por consulta, contratada na Loja Serpro).
+        Depois de contratar, coloque no arquivo .env:
+      </p>
+      <pre class="codigo">SERPRO_CND_CONSUMER_KEY=sua-chave
+SERPRO_CND_CONSUMER_SECRET=seu-segredo</pre>
+      <p class="muted small">Enquanto isso, use "Emitir no site" e envie o PDF ao lado.</p>
+    <% } %>
+    <p class="muted small">
+      Certidoes <strong>estaduais e municipais</strong>: cada SEFAZ e prefeitura tem um site proprio, em geral com captcha,
+      e nao ha API oficial gratuita. Salve o link do site em "links estadual/municipal" e envie o PDF aqui.
+    </p>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Historico</h2></div>
+  <% if (historico.length === 0) { %>
+    <p class="muted">Nenhuma certidao registrada.</p>
+  <% } else { %>
+    <table class="table">
+      <thead><tr><th>Empresa</th><th>Tipo</th><th>Situacao</th><th>Emissao</th><th>Validade</th><th>Origem</th><th></th></tr></thead>
+      <tbody>
+        <% historico.forEach((c) => { %>
+          <tr>
+            <td><%= c.empresaNome %></td>
+            <td><%= ESFERAS[c.esfera] %></td>
+            <td><span class="tag <%= tagSit[c.situacao] %>"><%= SITUACOES[c.situacao] %></span></td>
+            <td class="muted"><%= fmt(c.dataEmissao) %></td>
+            <td><%= fmt(c.dataValidade) %><% if (c.situacao !== 'nao_emitida') { %> <span class="tag <%= tagStatus[c.status] %>"><%= txtStatus[c.status] %></span><% } %></td>
+            <td class="muted small"><%= c.origem === 'serpro' ? 'automatica (Serpro)' : 'enviada' %></td>
+            <td class="row-actions">
+              <% if (c.temPdf) { %><a href="/certidoes/<%= c._id %>/pdf" target="_blank" class="link">PDF</a><% } %>
+              <form method="post" action="/certidoes/<%= c._id %>/excluir" onsubmit="return confirm('Remover esta certidao?')" style="display:inline">
+                <button class="btn btn-sm btn-danger">Excluir</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>

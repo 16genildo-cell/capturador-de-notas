@@ -1,0 +1,111 @@
+<%
+  // Seletor "todas as empresas" / "so algumas" com a lista de empresas da conta.
+  const escH = (t) => String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const seletorEmpresas = (todas, marcadas) => {
+    let h = `<label class="inline" style="display:block" data-todas><input type="radio" name="todasEmpresas" value="todas" ${todas ? 'checked' : ''} /> Todos os clientes do escritorio</label>`;
+    h += `<label class="inline" style="display:block"><input type="radio" name="todasEmpresas" value="algumas" ${todas ? '' : 'checked'} /> Somente os clientes marcados:</label>`;
+    h += '<div style="max-height:220px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:6px 10px;margin:4px 0 8px">';
+    if (!empresas.length) h += '<span class="muted small">Nenhum cliente cadastrado.</span>';
+    empresas.forEach((e) => {
+      const id = String(e._id);
+      h += `<label class="inline" style="display:block"><input type="checkbox" name="empresas" value="${id}" ${marcadas.includes(id) ? 'checked' : ''} /> ${escH(e.razaoSocial)} <span class="muted small">${escH(e.cnpj)}</span></label>`;
+    });
+    return h + '</div>';
+  };
+%>
+<section class="card">
+  <div class="card-head"><h2>Usuarios com acesso</h2></div>
+  <table class="table">
+    <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Clientes que ve</th><th>Situacao</th><th>Ultimo acesso</th><th></th></tr></thead>
+    <tbody>
+      <% usuarios.forEach((u) => { const id = String(u._id); %>
+        <tr>
+          <td><strong><%= u.nome %></strong><% if (id === eu) { %> <span class="muted small">(voce)</span><% } %></td>
+          <td><%= u.email %></td>
+          <td>
+            <% if (id === dono || id === eu) { %>
+              <span class="tag tag-ok"><%= rotuloPerfil[u.role] || u.role %></span><% if (id === dono) { %> <span class="muted small">dono do escritorio</span><% } %>
+            <% } else { %>
+              <form method="post" action="/usuarios/<%= id %>/perfil" class="inline">
+                <select name="role" onchange="this.form.submit()">
+                  <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>Administrador</option>
+                  <option value="operador" <%= u.role === 'operador' ? 'selected' : '' %>>Equipe</option>
+                  <option value="cliente" <%= u.role === 'cliente' ? 'selected' : '' %>>Cliente do escritorio</option>
+                </select>
+              </form>
+            <% } %>
+          </td>
+          <td class="small">
+            <% const restrito = u.role === 'cliente' || (u.role !== 'admin' && u.todasEmpresas === false); %>
+            <% if (!restrito) { %>
+              <span class="muted">todas</span>
+            <% } else { %>
+              <span class="tag tag-warn"><%= u.empresasNomes.length %> cliente(s)</span>
+              <div class="muted"><%= u.empresasNomes.slice(0, 3).join(', ') %><%= u.empresasNomes.length > 3 ? ` e mais ${u.empresasNomes.length - 3}` : '' %></div>
+            <% } %>
+            <% if (u.role !== 'admin' && id !== dono) { %>
+              <details class="inline-det">
+                <summary class="btn btn-sm btn-ghost">Escolher clientes</summary>
+                <form method="post" action="/usuarios/<%= id %>/empresas" class="form form-mini" style="min-width:280px">
+                  <%- seletorEmpresas(!restrito, u.empresasIds) %>
+                  <button class="btn btn-sm">Salvar acesso</button>
+                </form>
+              </details>
+            <% } %>
+          </td>
+          <td><span class="tag <%= u.ativo ? 'tag-ok' : 'tag-err' %>"><%= u.ativo ? 'ativo' : 'desativado' %></span></td>
+          <td class="muted small"><%= u.ultimoLogin ? new Date(u.ultimoLogin).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'nunca' %></td>
+          <td class="row-actions">
+            <details class="inline-det">
+              <summary class="btn btn-sm btn-ghost">Redefinir senha</summary>
+              <form method="post" action="/usuarios/<%= id %>/senha" class="form form-mini">
+                <input type="password" name="senha" minlength="8" required placeholder="nova senha (min. 8)" autocomplete="new-password" />
+                <button class="btn btn-sm">Salvar</button>
+              </form>
+            </details>
+            <% if (id !== eu && id !== dono) { %>
+              <form method="post" action="/usuarios/<%= id %>/ativo" class="inline"><button class="btn btn-sm"><%= u.ativo ? 'Desativar' : 'Reativar' %></button></form>
+              <form method="post" action="/usuarios/<%= id %>/excluir" class="inline" onsubmit="return confirm('Excluir este usuario?')"><button class="btn btn-sm btn-danger">Excluir</button></form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Novo usuario</h2></div>
+    <form method="post" action="/usuarios" class="form">
+      <div class="form-row">
+        <label>Nome <input type="text" name="nome" required /></label>
+        <label>E-mail <input type="email" name="email" required autocomplete="off" /></label>
+      </div>
+      <div class="form-row">
+        <label>Senha inicial (min. 8) <input type="password" name="senha" minlength="8" required autocomplete="new-password" /></label>
+        <label>Perfil
+          <select name="role">
+            <option value="operador">Equipe do escritorio</option>
+            <option value="cliente">Cliente do escritorio (so consulta)</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </label>
+      </div>
+      <fieldset style="border:1px solid #ddd;border-radius:6px;padding:8px 12px">
+        <legend class="small">Clientes que este usuario ve (equipe ou cliente do escritorio)</legend>
+        <%- seletorEmpresas(true, []) %>
+      </fieldset>
+      <div class="form-actions"><button class="btn btn-primary">Criar usuario</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Perfis</h2></div>
+    <ul class="kv-lista small">
+      <li><strong>Administrador:</strong> tudo, inclusive certificados, clientes, usuarios, importacao, manifestacao e a assinatura do escritorio. Ve todos os clientes.</li>
+      <li><strong>Equipe:</strong> consulta notas e relatorios, roda capturas, emite notas, baixa XML/PDF e da ciencia. Pode ver todos os clientes ou so os da carteira dela.</li>
+      <li><strong>Cliente do escritorio:</strong> login para o seu cliente. So consulta e baixa as notas e relatorios dos CNPJs marcados. Nao da ciencia, nao captura, nao emite e nao ve outros clientes, a equipe nem a cobranca.</li>
+    </ul>
+    <p class="muted small">Para criar um Cliente do escritorio, escolha o perfil e marque os CNPJs dele.</p>
+  </section>
+</div>

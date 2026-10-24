@@ -1,0 +1,101 @@
+<%
+  const ct = locals.contato || { form: {} };
+  const fc = ct.form || {};
+  const assunto = encodeURIComponent('Quero contratar o ' + nomeProduto + ' para o meu escritório');
+%>
+<section class="lp-abertura">
+  <div>
+    <h1>Notas fiscais de todos os clientes do escritório, baixadas sozinhas.</h1>
+    <p class="sub">Cadastre o certificado A1 de cada cliente uma vez. A cada hora, o sistema busca na SEFAZ e no Ambiente Nacional da NFS-e as notas de toda a carteira e guarda o XML e o PDF para a sua equipe.</p>
+    <div class="acoes">
+      <% if (cadastroAberto) { %><a href="/registrar" class="bt bt-azul">Testar grátis por <%= teste.dias %> dias</a>
+      <% } else if (emailSuporte) { %><a href="mailto:<%= emailSuporte %>?subject=<%= assunto %>" class="bt bt-azul">Quero contratar</a>
+      <% } else { %><a href="#contato" class="bt bt-azul">Quero contratar</a><% } %>
+      <a href="/login" class="bt bt-linha">Entrar no sistema</a>
+    </div>
+    <p class="nota-teste">Teste grátis de <%= teste.dias %> dias, liberado pela nossa equipe.</p>
+  </div>
+
+  <figure class="lp-cena">
+    <picture>
+      <source type="image/webp" srcset="/static/img/escritorio-560.webp 560w, /static/img/escritorio-1000.webp 1000w" sizes="(max-width: 960px) 100vw, 480px" />
+      <img class="lp-foto" src="/static/img/escritorio-1000.jpg" srcset="/static/img/escritorio-560.jpg 560w, /static/img/escritorio-1000.jpg 1000w" sizes="(max-width: 960px) 100vw, 480px" width="1000" height="1112" alt="Contadora sorrindo enquanto faz anotações na mesa do escritório" fetchpriority="high" />
+    </picture>
+    <div class="lp-caixa" role="img" aria-label="Exemplo da caixa de entrada com notas fiscais de quatro clientes chegando">
+      <div class="lp-caixa-topo">
+        <strong>Notas novas desta manhã</strong>
+        <span class="qtd num">37<small>de 12 clientes</small></span>
+      </div>
+      <ol>
+        <li class="lp-nota"><span class="quem">Padaria Pão Dourado</span><span class="valor num">R$ 3.218,40</span><span class="doc num">NF-e 4.512 de fornecedor</span><span class="st st-ok">XML completo</span></li>
+        <li class="lp-nota"><span class="quem">Transportes Rio Claro</span><span class="valor num">R$ 1.950,00</span><span class="doc num">CT-e 88.104</span><span class="st st-ok">Autorizada</span></li>
+        <li class="lp-nota"><span class="quem">Clínica Bem-Estar</span><span class="valor num">R$ 780,00</span><span class="doc num">NFS-e 317 tomada</span><span class="st st-azul">Recebida</span></li>
+        <li class="lp-nota"><span class="quem">Mercado Boa Vista</span><span class="valor num">R$ 12.430,15</span><span class="doc num">NF-e 19.776, só resumo</span><span class="st st-prazo">Manifestar em 12 dias</span></li>
+      </ol>
+      <div class="lp-chave">
+        <span>Chave de acesso da NF-e 4.512</span>
+        <code><span>3526 1012 3456 7800 0190 5500</span><span>1000 0045 1210 0004 5127</span></code>
+      </div>
+    </div>
+    <figcaption class="lp-legenda">Caixa de entrada: exemplo ilustrativo.</figcaption>
+  </figure>
+</section>
+
+<div class="lp-faixa" id="como-funciona">
+  <section class="lp-secao">
+    <h2>Do certificado ao XML, sem planilha nem download manual</h2>
+    <ol class="lp-passos">
+      <li><h3>Cadastre o cliente</h3><p>Envie o certificado A1 (e-CNPJ ou e-CPF) e o sistema já reconhece o cliente e os documentos dele.</p></li>
+      <li><h3>A captura roda sozinha</h3><p>A cada hora consultamos a SEFAZ (NF-e, NFC-e e CT-e) e o Ambiente Nacional (NFS-e) para todos os CNPJs da carteira.</p></li>
+      <li><h3>A equipe trabalha com tudo pronto</h3><p>XML completo, DANFE em PDF, prazos de manifestação e aviso de certificado vencendo, cliente por cliente.</p></li>
+    </ol>
+  </section>
+</div>
+
+<section class="lp-secao" id="recursos">
+  <h2>O que muda na rotina do escritório</h2>
+  <dl class="lp-recursos">
+    <div><dt>Manifestação sem correria</dt><dd>A ciência automática libera o XML completo, e o sistema avisa antes do prazo de 180 dias.</dd></div>
+    <div><dt>Download por cliente e período</dt><dd>ZIP com XML, PDF e planilha, pronto para importar no sistema contábil.</dd></div>
+    <div><dt>Equipe por carteira</dt><dd>Cada pessoa da equipe vê só os clientes que atende; os administradores veem todos.</dd></div>
+    <div><dt>Acesso para o seu cliente</dt><dd>Um login só de consulta para o cliente ver e baixar as notas do próprio CNPJ.</dd></div>
+    <div><dt>Emissão de notas</dt><dd>NFS-e pelo Emissor Nacional e NF-e ou NFC-e na SEFAZ, em nome de cada cliente.</dd></div>
+    <div><dt>Relatórios</dt><dd>Entradas e saídas por mês, fornecedor, cliente, CFOP e NCM, com exportação para Excel.</dd></div>
+    <div><dt>Certificados protegidos</dt><dd>Certificados e senhas guardados com criptografia; cada escritório vê apenas os próprios clientes.</dd></div>
+    <div><dt>Suporte dentro do sistema</dt><dd>Fale com a nossa equipe pelo chat, sem sair do painel.</dd></div>
+  </dl>
+</section>
+
+<div class="lp-faixa" id="contato">
+  <section class="lp-secao lp-contato">
+    <div class="lado">
+      <h2>Vamos conversar sobre o seu escritório</h2>
+      <p>Conte quantos clientes você atende e como a equipe trabalha hoje. Respondemos por e-mail.</p>
+      <% if (emailSuporte) { %><p>Se preferir, escreva direto para <a href="mailto:<%= emailSuporte %>"><%= emailSuporte %></a>.</p><% } %>
+    </div>
+    <% if (ct.enviado) { %>
+      <div class="lp-form"><div class="lp-aviso ok" role="status">Mensagem enviada. Vamos responder no seu e-mail em breve.</div></div>
+    <% } else { %>
+      <form method="post" action="/contato#contato" class="lp-form">
+        <% if (ct.erro) { %><div class="lp-aviso erro" role="alert"><%= ct.erro %></div><% } %>
+        <div class="dupla">
+          <label>Seu nome<input name="nome" required maxlength="120" autocomplete="name" value="<%= fc.nome || '' %>" /></label>
+          <label>E-mail<input type="email" name="email" required maxlength="160" autocomplete="email" value="<%= fc.email || '' %>" /></label>
+        </div>
+        <div class="dupla">
+          <label><span>Escritório <small>(opcional)</small></span><input name="escritorio" maxlength="160" autocomplete="organization" value="<%= fc.escritorio || '' %>" /></label>
+          <label><span>Telefone ou WhatsApp <small>(opcional)</small></span><input type="tel" name="telefone" maxlength="40" autocomplete="tel" value="<%= fc.telefone || '' %>" /></label>
+        </div>
+        <label><span>Quantos clientes o escritório atende? <small>(opcional)</small></span>
+          <select name="qtdClientes">
+            <option value="">Prefiro não informar</option>
+            <% (locals.faixasClientes || []).forEach((f) => { %><option value="<%= f %>" <%= fc.qtdClientes === f ? 'selected' : '' %>><%= f.replace('ate', 'até') %></option><% }) %>
+          </select>
+        </label>
+        <label>Mensagem<textarea name="mensagem" required maxlength="3000" rows="5"><%= fc.mensagem || '' %></textarea></label>
+        <input type="text" name="site" class="lp-isca" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <div><button class="bt bt-azul">Enviar mensagem</button></div>
+      </form>
+    <% } %>
+  </section>
+</div>

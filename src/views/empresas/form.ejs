@@ -1,0 +1,83 @@
+<div class="card card-form">
+  <form method="post" action="<%= empresa._id ? '/empresas/' + empresa._id : '/empresas' %>" class="form">
+    <div class="form-row">
+      <label>Razao social / Nome *
+        <input type="text" name="razaoSocial" value="<%= empresa.razaoSocial || '' %>" required />
+      </label>
+      <label>Nome fantasia
+        <input type="text" name="nomeFantasia" value="<%= empresa.nomeFantasia || '' %>" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>CNPJ ou CPF *
+        <input type="text" name="cnpj" value="<%= empresa.cnpj || '' %>" required placeholder="CNPJ da empresa ou CPF da pessoa fisica" />
+      </label>
+      <label>UF *
+        <input type="text" name="uf" value="<%= empresa.uf || '' %>" maxlength="2" required placeholder="SP" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Inscricao estadual
+        <input type="text" name="inscricaoEstadual" value="<%= empresa.inscricaoEstadual || '' %>" />
+      </label>
+      <label>Inscricao municipal
+        <input type="text" name="inscricaoMunicipal" value="<%= empresa.inscricaoMunicipal || '' %>" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Codigo IBGE do municipio
+        <input type="text" name="municipioCodigo" value="<%= empresa.municipioCodigo || '' %>" />
+      </label>
+      <label>Municipio
+        <input type="text" name="municipioNome" value="<%= empresa.municipioNome || '' %>" />
+      </label>
+    </div>
+
+    <div class="form-row">
+      <label>Certificado digital (e-CNPJ ou e-CPF)
+        <select name="certificado">
+          <option value="">— selecione —</option>
+          <% certificados.forEach((c) => { %>
+            <option value="<%= c._id %>" <%= String(empresa.certificado) === String(c._id) ? 'selected' : '' %>>
+              <%= c.apelido %><%= c.cnpjCpf ? ' (' + c.cnpjCpf + ')' : '' %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Provedor NFS-e
+        <select name="nfseProvedor">
+          <option value="nacional" <%= (empresa.nfseMunicipal && empresa.nfseMunicipal.provedor === 'nacional') ? 'selected' : '' %>>Padrao Nacional</option>
+          <option value="exemplo" <%= (empresa.nfseMunicipal && empresa.nfseMunicipal.provedor === 'exemplo') ? 'selected' : '' %>>Exemplo (homologacao)</option>
+        </select>
+      </label>
+    </div>
+
+    <% const cap = Object.assign({ nfe: true, nfse: true, cte: true }, empresa.captura || {}); %>
+    <fieldset class="checks">
+      <legend>O que capturar</legend>
+      <label class="check"><input type="checkbox" name="capturaNfe" <%= cap.nfe ? 'checked' : '' %> /> NF-e / NFC-e (produtos)</label>
+      <label class="check"><input type="checkbox" name="capturaNfse" <%= cap.nfse ? 'checked' : '' %> /> NFS-e (servicos)</label>
+      <label class="check"><input type="checkbox" name="capturaCte" <%= cap.cte ? 'checked' : '' %> /> CT-e (transporte)</label>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="<%= locals.base || '/empresas' %>" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+  <% if (empresa._id) { %>
+    <section class="card">
+      <div class="card-head"><h2>Emissao de NFS-e</h2></div>
+      <p class="muted small">Regime tributario, serie, ambiente (teste ou producao) e padroes da nota emitida pelo Emissor Nacional.</p>
+      <a href="<%= locals.base || '/empresas/' + empresa._id %>/emitir/configurar/<%= empresa._id %>" class="btn btn-sm">Configurar emissao</a>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Emissao de NF-e e NFC-e</h2></div>
+      <p class="muted small">Venda de produtos: Inscricao Estadual, endereco, series, CSC da NFC-e e regime do Simples.</p>
+      <a href="<%= locals.base || '/empresas/' + empresa._id %>/vendas/configurar/<%= empresa._id %>" class="btn btn-sm">Configurar NF-e / NFC-e</a>
+    </section>
+  <% } %>
+</div>

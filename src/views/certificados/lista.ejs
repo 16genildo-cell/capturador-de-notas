@@ -1,0 +1,39 @@
+<div class="page-actions">
+  <a href="/certificados/novo" class="btn btn-primary">+ Enviar certificado A1</a>
+</div>
+
+<% if (certificados.length === 0) { %>
+  <div class="card">
+    <p class="muted">Nenhum certificado enviado. O certificado digital A1 (.pfx/.p12) e necessario para capturar NF-e na SEFAZ.</p>
+  </div>
+<% } else { %>
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr><th>Apelido</th><th>Titular</th><th>CNPJ/CPF</th><th>Validade</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% certificados.forEach((c) => { %>
+          <tr>
+            <td><strong><%= c.apelido %></strong></td>
+            <td class="muted"><%= c.titular || '-' %></td>
+            <td><%= c.cnpjCpf || '-' %></td>
+            <td>
+              <% if (c.vencido) { %>
+                <span class="tag tag-err">vencido</span>
+              <% } else { %>
+                <span class="tag tag-ok">valido</span>
+              <% } %>
+              <br><span class="muted"><%= c.validoAte ? new Date(c.validoAte).toLocaleDateString('pt-BR') : '-' %></span>
+            </td>
+            <td class="row-actions">
+              <form method="post" action="/certificados/<%= c._id %>/excluir" onsubmit="return confirm('Remover este certificado?')">
+                <button class="btn btn-sm btn-danger">Excluir</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>

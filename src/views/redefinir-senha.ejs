@@ -1,0 +1,12 @@
+<h1>Criar nova senha</h1>
+<p class="sub">Use pelo menos 8 caracteres.</p>
+<form method="post" action="/redefinir-senha/<%= token %>" class="ent-form">
+  <label>Nova senha
+    <input type="password" name="nova" required minlength="8" autofocus autocomplete="new-password" />
+  </label>
+  <label>Confirmar nova senha
+    <input type="password" name="confirmar" required minlength="8" autocomplete="new-password" />
+  </label>
+  <button type="submit" class="bt bt-azul">Salvar nova senha</button>
+</form>
+<div class="ent-rodape"><a href="/login">Voltar para o login</a></div>

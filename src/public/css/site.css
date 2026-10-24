@@ -1,0 +1,203 @@
+/*
+ * Pagina inicial (.lp) e telas de acesso (.ent) - compartilhado pelo painel (EJS) e pelo site React.
+ * Tudo fica dentro de .lp / .ent para nao interferir no restante do sistema.
+ */
+.lp, .ent {
+  --papel: #f7f9fc;
+  --branco: #ffffff;
+  --tinta: #13233a;
+  --suave: #56667d;
+  --linha: #dce3ec;
+  --azul: #1e5bd8;
+  --azul-escuro: #1747ae;
+  --azul-claro: #e8effc;
+  --verde: #0f7a4a;
+  --verde-claro: #e3f3ea;
+  --ambar: #a85a06;
+  --ambar-claro: #fbefdc;
+  font-family: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  color: var(--tinta);
+  background: var(--papel);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.lp *, .ent * { box-sizing: border-box; }
+.lp a, .ent a { color: var(--azul); }
+.lp :focus-visible, .ent :focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; border-radius: 4px; }
+.lp h1, .lp h2, .lp h3, .ent h1, .ent h2 { color: var(--tinta); margin: 0; letter-spacing: -0.015em; }
+.lp .num, .ent .num { font-variant-numeric: tabular-nums; }
+
+/* botoes */
+.lp .bt, .ent .bt {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-weight: 600; font-size: 1rem; line-height: 1;
+  padding: 14px 22px; border-radius: 8px; border: 1.5px solid transparent;
+  cursor: pointer; text-decoration: none; transition: background-color .15s, border-color .15s, color .15s;
+}
+.lp .bt-azul, .ent .bt-azul { background: var(--azul); color: #fff; }
+.lp .bt-azul:hover, .ent .bt-azul:hover { background: var(--azul-escuro); color: #fff; text-decoration: none; }
+.lp .bt-linha { border-color: var(--linha); color: var(--tinta); background: var(--branco); }
+.lp .bt-linha:hover { border-color: var(--tinta); text-decoration: none; }
+.lp .bt[disabled], .ent .bt[disabled] { opacity: .6; cursor: progress; }
+
+/* ---------------------------------------------------------------- topo e rodape */
+.lp-topo { max-width: 1180px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.lp-marca { display: inline-flex; align-items: center; gap: 10px; color: var(--tinta) !important; text-decoration: none !important; font-weight: 700; font-size: 1.05rem; }
+.lp-marca .selo {
+  width: 34px; height: 34px; border-radius: 8px; background: var(--tinta); color: #fff;
+  display: grid; place-items: center; font-size: .82rem; font-weight: 800; letter-spacing: .02em;
+}
+.lp-nav { display: flex; align-items: center; gap: 26px; }
+.lp-nav a { color: var(--tinta); text-decoration: none; font-weight: 500; }
+.lp-nav a:hover { color: var(--azul); }
+.lp-nav .bt { padding: 10px 18px; }
+.lp-rodape { border-top: 1px solid var(--linha); }
+.lp-faixa + .lp-rodape { border-top: 0; }
+.lp-rodape > div { max-width: 1180px; margin: 0 auto; padding: 26px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--suave); font-size: .92rem; }
+.lp-rodape nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.lp-rodape a { color: var(--suave); }
+
+/* ---------------------------------------------------------------- abertura */
+.lp-abertura { max-width: 1180px; margin: 0 auto; padding: 40px 24px 72px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; align-items: center; }
+.lp-abertura h1 { font-size: clamp(2.3rem, 4.4vw, 3.5rem); line-height: 1.05; font-weight: 800; max-width: 16ch; }
+.lp-abertura .sub { font-size: 1.15rem; color: var(--suave); margin: 22px 0 30px; max-width: 46ch; }
+.lp-abertura .acoes { display: flex; flex-wrap: wrap; gap: 12px; }
+.lp-abertura .nota-teste { margin: 18px 0 0; font-size: .92rem; color: var(--suave); }
+
+/* caixa de entrada de notas (elemento principal da pagina) */
+.lp-caixa { background: var(--branco); border: 1px solid var(--linha); border-radius: 14px; box-shadow: 0 24px 48px -28px rgba(19, 35, 58, .35); overflow: hidden; }
+.lp-caixa-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 18px 22px 14px; border-bottom: 1px solid var(--linha); }
+.lp-caixa-topo strong { font-size: 1rem; }
+.lp-caixa-topo .qtd { font-size: 1.9rem; font-weight: 800; line-height: 1; color: var(--azul); }
+.lp-caixa-topo .qtd small { font-size: .8rem; font-weight: 500; color: var(--suave); margin-left: 6px; }
+.lp-caixa ol { list-style: none; margin: 0; padding: 0; }
+.lp-nota { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 14px 22px; border-bottom: 1px solid var(--linha); }
+.lp-nota .quem { font-weight: 600; }
+.lp-nota .doc { color: var(--suave); font-size: .88rem; }
+.lp-nota .valor { font-weight: 700; text-align: right; }
+.lp-nota .st { justify-self: end; align-self: start; white-space: nowrap; font-size: .78rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+.st-ok { background: var(--verde-claro); color: var(--verde); }
+.st-azul { background: var(--azul-claro); color: var(--azul-escuro); }
+.st-prazo { background: var(--ambar-claro); color: var(--ambar); }
+.lp-chave { padding: 14px 22px 18px; background: var(--papel); }
+.lp-chave span { display: block; font-size: .78rem; color: var(--suave); margin-bottom: 4px; }
+.lp-chave code { display: block; background: none; padding: 0; border: 0; font-family: inherit; font-variant-numeric: tabular-nums; font-size: .9rem; letter-spacing: .03em; color: var(--tinta); word-spacing: .15em; }
+.lp-chave code > span { display: block; color: inherit; font-size: inherit; margin: 0; }
+.lp-legenda { font-size: .82rem; color: var(--suave); margin: 10px 4px 0; }
+
+/* entrada das notas: um unico movimento, ao carregar */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-nota { animation: lp-chega .55s cubic-bezier(.2, .7, .2, 1) both; }
+  .lp-nota:nth-child(1) { animation-delay: .15s; }
+  .lp-nota:nth-child(2) { animation-delay: .35s; }
+  .lp-nota:nth-child(3) { animation-delay: .55s; }
+  .lp-nota:nth-child(4) { animation-delay: .75s; }
+  @keyframes lp-chega { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+}
+
+/* cena da abertura: foto do escritorio com a caixa de entrada sobreposta.
+   A caixa entra no fluxo logo apos a foto e sobe 40% da largura (margem em % usa a largura):
+   com a foto em 82% da largura e proporcao 1000x1112, ela comeca a ~56% da altura da foto,
+   abaixo do rosto, em qualquer largura de tela. */
+.lp-cena { margin: 0; }
+.lp-foto { display: block; width: 82%; height: auto; aspect-ratio: 1000 / 1112; object-fit: cover; border-radius: 18px; background: #e6ecf3; }
+.lp-cena .lp-caixa { position: relative; width: clamp(330px, 76%, 370px); margin: -40% 0 0 auto; }
+.lp-cena .lp-caixa-topo { padding: 14px 18px 10px; }
+.lp-cena .lp-caixa-topo strong { font-size: .95rem; }
+.lp-cena .lp-caixa-topo .qtd { font-size: 1.6rem; text-align: right; }
+.lp-cena .lp-caixa-topo .qtd small { display: block; margin: 2px 0 0; }
+.lp-cena .lp-nota { padding: 10px 18px; font-size: .93rem; }
+.lp-cena .lp-chave { padding: 10px 18px 14px; }
+.lp-cena .lp-legenda { margin: 10px 0 0; text-align: right; }
+@media (max-width: 960px) {
+  .lp-foto { width: 100%; aspect-ratio: 4 / 3; object-position: 50% 18%; }
+  .lp-cena .lp-caixa { width: auto; margin: -96px 16px 0; }
+  .lp-cena .lp-legenda { margin: 10px 16px 0; }
+}
+
+/* ---------------------------------------------------------------- secoes */
+.lp-secao { max-width: 1180px; margin: 0 auto; padding: 64px 24px; }
+.lp-secao > h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.15; font-weight: 800; max-width: 26ch; }
+.lp-secao > .intro { color: var(--suave); max-width: 60ch; margin: 12px 0 0; }
+.lp-faixa { background: var(--branco); border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+
+/* como funciona: e de fato uma sequencia, por isso numerado */
+.lp-passos { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; counter-reset: passo; }
+.lp-passos li { counter-increment: passo; border-top: 3px solid var(--tinta); padding-top: 18px; }
+.lp-passos li::before { content: counter(passo); display: block; font-size: 2.6rem; font-weight: 800; line-height: 1; color: var(--azul); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.lp-passos h3 { font-size: 1.18rem; margin-bottom: 8px; }
+.lp-passos p { margin: 0; color: var(--suave); }
+
+/* recursos: lista em duas colunas, sem caixas */
+.lp-recursos { margin: 40px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; }
+.lp-recursos div { padding: 22px 0; border-bottom: 1px solid var(--linha); }
+.lp-recursos dt { font-weight: 700; font-size: 1.08rem; margin-bottom: 6px; }
+.lp-recursos dd { margin: 0; color: var(--suave); }
+
+/* contato */
+.lp-contato { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
+.lp-contato .lado h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.15; font-weight: 800; }
+.lp-contato .lado p { color: var(--suave); margin: 14px 0 0; }
+.lp-form { background: var(--branco); border: 1px solid var(--linha); border-radius: 14px; padding: 28px; display: grid; gap: 16px; }
+.lp-form .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lp-form label, .ent-form label { display: grid; gap: 6px; font-weight: 600; font-size: .92rem; }
+.lp-form label small, .ent-form label small { font-weight: 400; color: var(--suave); }
+.lp-form label > span, .ent-form label > span { display: block; }
+.lp-form input, .lp-form select, .lp-form textarea, .ent-form input {
+  font: inherit; font-size: 1rem; color: var(--tinta); background: var(--branco);
+  border: 1.5px solid var(--linha); border-radius: 8px; padding: 11px 13px; width: 100%;
+}
+.lp-form textarea { resize: vertical; min-height: 120px; }
+.lp-form input:focus, .lp-form select:focus, .lp-form textarea:focus, .ent-form input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px var(--azul-claro); }
+.lp-aviso, .ent-aviso { padding: 12px 14px; border-radius: 8px; font-size: .95rem; }
+.lp-aviso.ok, .ent-aviso.ok { background: var(--verde-claro); color: var(--verde); }
+.lp-aviso.erro, .ent-aviso.erro { background: #fde8e8; color: #9b1c1c; }
+.lp-aviso.info, .ent-aviso.info { background: var(--azul-claro); color: var(--azul-escuro); }
+.lp-isca { position: absolute; left: -9999px; width: 1px; height: 1px; }
+
+/* ---------------------------------------------------------------- acesso (login, esqueci a senha) */
+.ent { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.ent-painel { background: var(--tinta); color: #dfe7f3; padding: 48px 56px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; }
+.ent-painel .lp-marca { color: #fff !important; }
+.ent-painel .lp-marca .selo { background: #fff; color: var(--tinta); }
+.ent-painel blockquote { margin: 0; font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 700; line-height: 1.2; color: #fff; max-width: 18ch; }
+.ent-painel p { margin: 14px 0 0; color: #b9c6d9; max-width: 40ch; }
+.ent-chave { font-variant-numeric: tabular-nums; letter-spacing: .06em; word-spacing: .2em; color: #6f86a8; font-size: .95rem; line-height: 1.9; white-space: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 65%, transparent); mask-image: linear-gradient(90deg, #000 65%, transparent); }
+.ent-chave b { color: #fff; font-weight: 600; }
+.ent-lado { display: grid; place-items: center; padding: 40px 24px; background: var(--papel); }
+.ent-caixa { width: 100%; max-width: 380px; }
+.ent-caixa .lp-marca { display: none; margin-bottom: 28px; }
+.ent-caixa h1 { font-size: 1.9rem; font-weight: 800; }
+.ent-caixa .sub { color: var(--suave); margin: 8px 0 26px; }
+.ent-form { display: grid; gap: 16px; }
+.ent-form .bt { width: 100%; padding: 15px; margin-top: 4px; }
+.ent-rodape { margin-top: 22px; font-size: .95rem; color: var(--suave); display: grid; gap: 8px; }
+.ent-rodape a { font-weight: 600; }
+
+/* ---------------------------------------------------------------- telas menores */
+@media (max-width: 960px) {
+  .lp-abertura { grid-template-columns: 1fr; gap: 40px; padding-top: 24px; }
+  .lp-abertura h1 { max-width: 16ch; }
+  .lp-passos { grid-template-columns: 1fr; gap: 28px; }
+  .lp-recursos { grid-template-columns: 1fr; }
+  .lp-contato { grid-template-columns: 1fr; gap: 28px; }
+  .ent { grid-template-columns: 1fr; }
+  .ent-painel { display: none; }
+  .ent-caixa .lp-marca { display: inline-flex; }
+}
+@media (max-width: 560px) {
+  .lp, .ent { font-size: 16px; }
+  .lp-topo { padding: 16px; }
+  .lp-nav { gap: 16px; }
+  .lp-nav .so-largo { display: none; }
+  .lp-abertura, .lp-secao { padding-left: 16px; padding-right: 16px; }
+  .lp-secao { padding-top: 48px; padding-bottom: 48px; }
+  .lp-nota { padding: 12px 16px; }
+  .lp-caixa-topo, .lp-chave { padding-left: 16px; padding-right: 16px; }
+  .lp-form { padding: 20px; }
+  .lp-caixa-topo .qtd { text-align: right; }
+  .lp-caixa-topo .qtd small { display: block; margin: 4px 0 0; }
+  .lp-form .dupla { grid-template-columns: 1fr; }
+  .lp-abertura .acoes .bt { flex: 1 1 100%; }
+}

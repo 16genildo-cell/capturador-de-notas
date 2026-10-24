@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %> · <%= nomeProduto %></title>
+  <meta name="description" content="Captura automática de NF-e, NFC-e, NFS-e e CT-e para escritórios de contabilidade: o XML e o PDF das notas de todos os clientes, direto da SEFAZ e do Ambiente Nacional." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+  <style>body.lp { margin: 0; }</style>
+</head>
+<body class="lp">
+  <header class="lp-topo">
+    <a href="/" class="lp-marca"><span class="selo" aria-hidden="true">CT</span><%= nomeProduto %></a>
+    <nav class="lp-nav" aria-label="Principal">
+      <a href="/#como-funciona" class="so-largo">Como funciona</a>
+      <a href="/#contato">Contato</a>
+      <% if (cadastroAberto) { %><a href="/registrar" class="so-largo">Criar conta</a><% } %>
+      <a href="/login" class="bt bt-azul">Entrar</a>
+    </nav>
+  </header>
+  <main><%- body %></main>
+  <footer class="lp-rodape">
+    <div>
+      <span>© <%= new Date().getFullYear() %> <%= nomeProduto %></span>
+      <nav aria-label="Links do rodapé">
+        <a href="/termos">Termos de uso</a>
+        <a href="/privacidade">Privacidade</a>
+        <% if (emailSuporte) { %><a href="mailto:<%= emailSuporte %>"><%= emailSuporte %></a><% } %>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<% const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+<div class="page-actions row-actions">
+  <a href="<%= base %>/emitir" class="btn btn-ghost">Voltar para Emitir NFS-e</a>
+  <% if (empresaSel && locals.ehAdmin) { %><a href="<%= base %>/emitir/servicos/novo?empresa=<%= empresaSel._id %>" class="btn btn-primary">+ Novo servico</a><% } %>
+</div>
+
+<% if (empresas.length > 1) { %>
+  <nav class="chips">
+    <% empresas.forEach((e) => { %>
+      <a href="<%= base %>/emitir/servicos?empresa=<%= e._id %>" class="chip <%= empresaSel && String(e._id) === String(empresaSel._id) ? 'active' : '' %>"><%= e.razaoSocial %></a>
+    <% }) %>
+  </nav>
+<% } %>
+
+<section class="card">
+  <div class="card-head"><h2>Servicos de <%= empresaSel ? empresaSel.razaoSocial : '-' %></h2></div>
+  <% if (!servicos.length) { %>
+    <p class="muted">Nenhum servico cadastrado. Cadastre os servicos que voce presta com codigo, descricao e (se quiser) cliente e valor fixos: depois e so clicar para emitir.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Servico</th><th>Codigo</th><th>Cliente</th><th class="dir">Valor</th><th>Emitidas</th><th></th></tr></thead>
+      <tbody>
+        <% servicos.forEach((s) => { %>
+          <tr>
+            <td><strong><%= s.nome %></strong><% if (!s.ativo) { %> <span class="tag tag-warn">desativado</span><% } %><div class="muted small"><%= s.descricao.slice(0, 80) %></div></td>
+            <td class="small"><%= s.cTribNac %></td>
+            <td class="small"><%= s.tomador.tipo === 'perguntar' ? 'informar na hora' : s.tomador.tipo === 'nenhum' ? 'sem tomador' : s.tomador.nome %></td>
+            <td class="dir nowrap"><%= s.valor > 0 ? 'R$ ' + brl(s.valor) : 'na hora' %></td>
+            <td class="small"><%= s.totalEmitidas || 0 %><% if (s.ultimaEmissao) { %><div class="muted">ultima <%= new Date(s.ultimaEmissao).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></div><% } %></td>
+            <td class="row-actions">
+              <% if (locals.ehAdmin) { %>
+                <a href="<%= base %>/emitir/servicos/<%= s._id %>/editar" class="btn btn-sm btn-ghost">Editar</a>
+                <form method="post" action="<%= base %>/emitir/servicos/<%= s._id %>/excluir" class="inline" onsubmit="return confirm('Excluir este servico? As notas ja emitidas nao sao afetadas.')"><button class="btn btn-sm btn-danger">Excluir</button></form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>

@@ -1,0 +1,92 @@
+<% const t = s.tomador || {}; const val = (x) => (x === null || x === undefined ? '' : x); const dec = (n) => (n === null || n === undefined || Number.isNaN(n) ? '' : String(n).replace('.', ',')); %>
+<form method="post" action="<%= base %><%= s._id ? '/emitir/servicos/' + s._id : '/emitir/servicos' %>" class="form">
+  <input type="hidden" name="empresa" value="<%= empresa._id %>" />
+  <section class="card card-form">
+    <div class="card-head"><h2>Servico de <%= empresa.razaoSocial %></h2></div>
+    <div class="form-row">
+      <label>Nome do botao *
+        <input type="text" name="nome" value="<%= val(s.nome) %>" required maxlength="80" placeholder="ex.: Mensalidade suporte - Cliente X" />
+      </label>
+      <label>Situacao
+        <select name="ativo">
+          <option value="on" <%= s.ativo !== false ? 'selected' : '' %>>Ativo (aparece em Emitir NFS-e)</option>
+          <option value="off" <%= s.ativo === false ? 'selected' : '' %>>Desativado</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Codigo de tributacao nacional (LC 116) * <input type="text" name="cTribNac" value="<%= val(s.cTribNac) %>" required placeholder="ex.: 01.07.01" /></label>
+      <label>Codigo NBS (opcional) <input type="text" name="cNBS" value="<%= val(s.cNBS) %>" placeholder="9 digitos" /></label>
+    </div>
+    <label>Descricao na nota *
+      <textarea name="descricao" rows="3" maxlength="2000" required><%= val(s.descricao) %></textarea>
+    </label>
+    <p class="muted small">Dica: use <code>{mes}</code>, <code>{ano}</code> ou <code>{competencia}</code> e eles viram o mes da emissao. Ex.: "Mensalidade de {mes} de {ano}" vira "Mensalidade de outubro de 2026".</p>
+    <div class="form-row">
+      <label>Valor (R$) - vazio = informar na hora <input type="text" name="valor" value="<%= dec(s.valor) %>" inputmode="decimal" placeholder="0,00" /></label>
+      <label>Municipio da prestacao (codigo IBGE) <input type="text" name="cLocPrestacao" value="<%= val(s.cLocPrestacao) %>" maxlength="7" inputmode="numeric" /></label>
+    </div>
+    <div class="form-row">
+      <label class="check"><input type="checkbox" name="issRetido" <%= s.issRetido ? 'checked' : '' %> /> ISS retido pelo tomador</label>
+      <label class="check"><input type="checkbox" name="naoIncidencia" <%= s.naoIncidencia ? 'checked' : '' %> /> Sem incidencia de ISS</label>
+    </div>
+    <% if ((empresa.emissaoNfse || {}).opSimpNac === '3') { %>
+      <label>Aliquota do ISS no Simples (%) - vazio = a do municipio <input type="text" name="aliquota" value="<%= dec(s.aliquota) %>" inputmode="decimal" /></label>
+    <% } %>
+    <label>Informacoes complementares (opcional) <input type="text" name="infoComplementar" value="<%= val(s.infoComplementar) %>" maxlength="2000" /></label>
+  </section>
+
+  <section class="card card-form">
+    <div class="card-head"><h2>Tomador (cliente)</h2></div>
+    <label>Quem recebe esta nota
+      <select name="tomadorTipo" id="tomadorTipo">
+        <option value="perguntar" <%= (t.tipo || 'perguntar') === 'perguntar' ? 'selected' : '' %>>Informar na hora de emitir</option>
+        <option value="cnpj" <%= t.tipo === 'cnpj' ? 'selected' : '' %>>Sempre a mesma empresa (CNPJ)</option>
+        <option value="cpf" <%= t.tipo === 'cpf' ? 'selected' : '' %>>Sempre a mesma pessoa (CPF)</option>
+        <option value="nenhum" <%= t.tipo === 'nenhum' ? 'selected' : '' %>>Sem tomador identificado</option>
+      </select>
+    </label>
+    <div class="tomador-fixo">
+      <div class="form-row">
+        <label>CPF / CNPJ <input type="text" name="tomadorDocumento" value="<%= val(t.documento) %>" inputmode="numeric" /></label>
+        <label>Nome / razao social <input type="text" name="tomadorNome" value="<%= val(t.nome) %>" /></label>
+      </div>
+      <div class="form-row">
+        <label>E-mail <input type="email" name="tomadorEmail" value="<%= val(t.email) %>" /></label>
+        <label>CEP (opcional) <input type="text" name="tomadorCep" id="tomadorCep" value="<%= val(t.cep) %>" inputmode="numeric" /></label>
+      </div>
+      <input type="hidden" name="tomadorCMun" id="tomadorCMun" value="<%= val(t.cMun) %>" />
+      <div class="form-row">
+        <label>Cidade <input type="text" name="tomadorCidade" id="tomadorCidade" value="<%= val(t.cidade) %>" readonly /></label>
+        <label>Logradouro <input type="text" name="tomadorLogradouro" id="tomadorLogradouro" value="<%= val(t.logradouro) %>" /></label>
+      </div>
+      <div class="form-row">
+        <label>Numero <input type="text" name="tomadorNumero" value="<%= val(t.numero) %>" /></label>
+        <label>Bairro <input type="text" name="tomadorBairro" id="tomadorBairro" value="<%= val(t.bairro) %>" /></label>
+      </div>
+      <input type="hidden" name="tomadorComplemento" value="<%= val(t.complemento) %>" />
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary">Salvar servico</button>
+      <a href="<%= base %>/emitir/servicos?empresa=<%= empresa._id %>" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </section>
+</form>
+<script>
+  (function () {
+    var tipo = document.getElementById('tomadorTipo');
+    function alt() { document.querySelector('.tomador-fixo').style.display = (tipo.value === 'cpf' || tipo.value === 'cnpj') ? '' : 'none'; }
+    tipo.addEventListener('change', alt); alt();
+    var cep = document.getElementById('tomadorCep');
+    cep.addEventListener('blur', function () {
+      var n = cep.value.replace(/\D/g, ''); if (n.length !== 8) return;
+      fetch('https://viacep.com.br/ws/' + n + '/json/').then(function (r) { return r.json(); }).then(function (d) {
+        if (d.erro) return;
+        document.getElementById('tomadorCMun').value = d.ibge || '';
+        document.getElementById('tomadorCidade').value = (d.localidade || '') + (d.uf ? ' - ' + d.uf : '');
+        var lg = document.getElementById('tomadorLogradouro'); if (!lg.value) lg.value = d.logradouro || '';
+        var br = document.getElementById('tomadorBairro'); if (!br.value) br.value = d.bairro || '';
+      }).catch(function () {});
+    });
+  })();
+</script>

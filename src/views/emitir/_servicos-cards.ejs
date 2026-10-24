@@ -1,0 +1,24 @@
+<%#
+  Cartoes de emissao com um clique. Espera: servicos, cfg (emissaoNfse da empresa), hoje, base.
+%>
+<% const brlCard = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+    <div class="grade-servicos">
+      <% servicos.forEach((sv) => { const p = sv.pendencias; const cliente = sv.tomador.tipo === 'perguntar' ? null : sv.tomador.tipo === 'nenhum' ? 'Sem tomador' : sv.tomador.nome; %>
+        <form method="post" action="<%= base %>/emitir/servicos/<%= sv._id %>/emitir" class="servico-card"
+              onsubmit="var b=this.querySelector('button');if(!confirm('Emitir NFS-e de &quot;<%= sv.nome.replace(/"/g, '') %>&quot;<%= cfg.ambiente !== 'producao' ? ' (TESTE)' : '' %>?'))return false;b.disabled=true;b.textContent='Emitindo...'">
+          <div class="sc-topo">
+            <strong><%= sv.nome %></strong>
+            <span class="sc-valor"><%= sv.valor > 0 ? 'R$ ' + brlCard(sv.valor) : '' %></span>
+          </div>
+          <div class="muted small"><%= cliente || 'cliente informado na hora' %> · <%= sv.cTribNac %></div>
+          <% if (p.tomador) { %>
+            <input type="text" name="tomadorDocumento" placeholder="CPF/CNPJ do cliente" inputmode="numeric" />
+            <input type="text" name="tomadorNome" placeholder="Nome do cliente" />
+            <label class="check small"><input type="checkbox" name="semTomador" /> sem tomador</label>
+          <% } %>
+          <% if (p.valor) { %><input type="text" name="valor" placeholder="Valor (R$)" inputmode="decimal" required /><% } %>
+          <details class="small"><summary class="link">competencia</summary><input type="date" name="competencia" value="<%= hoje %>" max="<%= hoje %>" /></details>
+          <button class="btn btn-primary btn-block">Emitir<%= cfg.ambiente !== 'producao' ? ' (teste)' : '' %></button>
+        </form>
+      <% }) %>
+    </div>

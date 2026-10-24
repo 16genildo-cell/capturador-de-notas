@@ -1,0 +1,66 @@
+<%
+  const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (d) => d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const e = emissao;
+  const tag = { autorizada: 'tag-ok', rejeitada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' }[e.status];
+%>
+<div class="page-actions row-actions">
+  <a href="<%= base %>/emitir" class="btn btn-ghost">Voltar</a>
+  <% if (e.nfseXml) { %>
+    <a href="<%= base %>/emitir/<%= e._id %>/pdf" target="_blank" class="btn btn-primary">Ver PDF (DANFSe)</a>
+    <a href="<%= base %>/emitir/<%= e._id %>/xml" class="btn">XML da NFS-e</a>
+  <% } %>
+  <% if (e.nota) { %><a href="<%= base %>/notas/<%= e.nota %>" class="btn">Ver nas notas fiscais</a><% } %>
+  <a href="<%= base %>/emitir?de=<%= e._id %>#formulario" class="btn">Emitir outra igual</a>
+</div>
+
+<section class="cards">
+  <div class="card stat"><span class="stat-label">Situacao</span><span class="stat-value small-value"><span class="tag <%= tag %>"><%= e.status.replace('_', ' ') %></span><% if (e.ambiente !== 'producao') { %> <span class="tag tag-warn">teste</span><% } %></span></div>
+  <div class="card stat"><span class="stat-label">Valor</span><span class="stat-value">R$ <%= brl(e.valor) %></span></div>
+  <div class="card stat"><span class="stat-label">DPS (serie/numero)</span><span class="stat-value small-value"><%= e.serie %> / <%= e.nDPS %></span><span class="muted small"><%= fmt(e.createdAt) %></span></div>
+</section>
+
+<% if (e.chaveAcesso) { %><p class="muted small chave-detalhe">Chave de acesso: <strong><%= e.chaveAcesso.replace(/(\d{5})(?=\d)/g, '$1 ') %></strong></p><% } %>
+
+<% if (e.erros && e.erros.length) { %>
+  <section class="card">
+    <div class="card-head"><h2><%= e.status === 'rejeitada' ? 'Motivos da rejeicao' : 'Mensagens' %></h2></div>
+    <ul class="log-list"><% e.erros.forEach((m) => { %><li><span class="tag tag-err">!</span> <span><%= m %></span></li><% }) %></ul>
+    <% if (e.status === 'rejeitada') { %><p class="muted small">Corrija os dados e use "Emitir outra igual": o formulario abre preenchido e o mesmo numero de DPS e reaproveitado.</p><% } %>
+  </section>
+<% } %>
+<% if (e.alertas && e.alertas.length) { %>
+  <section class="card"><div class="card-head"><h2>Alertas da Sefin</h2></div>
+    <ul class="log-list"><% e.alertas.forEach((m) => { %><li><span class="tag tag-warn">alerta</span> <span><%= m %></span></li><% }) %></ul>
+  </section>
+<% } %>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Resumo</h2></div>
+    <ul class="kv">
+      <li><span class="muted">Prestador</span><span><%= e.empresa ? e.empresa.razaoSocial : '-' %></span></li>
+      <li><span class="muted">Tomador</span><span><%= e.tomadorNome || 'nao identificado' %><%= docTomador ? ' · ' + docTomador : '' %></span></li>
+      <li><span class="muted">Competencia</span><span><%= e.competencia ? e.competencia.split('-').reverse().join('/') : '-' %></span></li>
+      <li><span class="muted">Servico</span><span class="kv-valor"><%= e.descricao %></span></li>
+      <li><span class="muted">Ambiente</span><span><%= e.ambiente === 'producao' ? 'producao' : 'producao restrita (teste)' %></span></li>
+    </ul>
+    <p class="small"><a href="<%= base %>/emitir/<%= e._id %>/xml?tipo=dps" class="link">baixar XML da DPS enviada</a><% if (e.eventoCancelamentoXml) { %> · <a href="<%= base %>/emitir/<%= e._id %>/xml?tipo=cancelamento" class="link">XML do cancelamento</a><% } %></p>
+  </section>
+
+  <% if (e.status === 'autorizada' && locals.ehAdmin) { %>
+    <section class="card">
+      <div class="card-head"><h2>Cancelar esta NFS-e</h2></div>
+      <form method="post" action="<%= base %>/emitir/<%= e._id %>/cancelar" class="form" onsubmit="return confirm('Cancelar esta NFS-e na Sefin Nacional? Esta acao nao pode ser desfeita.')">
+        <label>Motivo
+          <select name="cMotivo" required>
+            <% Object.entries(MOTIVOS_CANCELAMENTO).forEach(([k, n]) => { %><option value="<%= k %>"><%= n %></option><% }) %>
+          </select>
+        </label>
+        <label>Explique (15 a 255 caracteres) <input type="text" name="xMotivo" minlength="15" maxlength="255" required /></label>
+        <div class="form-actions"><button class="btn btn-danger">Cancelar NFS-e</button></div>
+      </form>
+      <p class="muted small">O prazo para cancelar e as regras dependem do municipio; se recusado, a Sefin informa o motivo.</p>
+    </section>
+  <% } %>
+</div>

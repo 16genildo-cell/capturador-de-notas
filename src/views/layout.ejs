@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %><%= locals.empresaAtual ? ' · ' + empresaAtual.razaoSocial : '' %> · <%= locals.nomeProduto || 'Captura Total' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">CT</span>
+        <span class="brand-name"><%= locals.nomeProduto || 'Captura Total' %></span>
+      </div>
+      <nav class="nav">
+        <% const tem = (id) => !locals.recursos || locals.recursos.includes(id); %>
+        <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Painel</a>
+        <% if (!locals.ehCliente) { %><a href="/captura" class="<%= currentPath.startsWith('/captura') ? 'active' : '' %>">Captura</a><% } %>
+        <a href="/notas" class="<%= currentPath.startsWith('/notas') ? 'active' : '' %>">Notas fiscais</a>
+        <% if (!locals.ehCliente) { %>
+          <% if (tem('emissao_nfse')) { %><a href="/emitir" class="<%= currentPath.startsWith('/emitir') ? 'active' : '' %>">Emitir NFS-e</a><% } %>
+          <% if (tem('emissao_nfe')) { %><a href="/vendas" class="<%= currentPath.startsWith('/vendas') ? 'active' : '' %>">Emitir NF-e / NFC-e</a><% } %>
+        <% } %>
+        <% if (tem('relatorios')) { %><a href="/relatorios" class="<%= currentPath.startsWith('/relatorios') ? 'active' : '' %>">Relatorios</a><% } %>
+        <% if (locals.ehAdmin && tem('importar_xml')) { %><a href="/importar" class="<%= currentPath.startsWith('/importar') ? 'active' : '' %>">Importar XML</a><% } %>
+        <a href="/empresas" class="<%= currentPath === '/empresas' || currentPath === '/empresas/nova' ? 'active' : '' %>"><%= locals.ehCliente ? 'Minhas empresas' : 'Clientes' %></a>
+        <% if (locals.ehAdmin) { %>
+          <a href="/certificados" class="<%= currentPath.startsWith('/certificados') ? 'active' : '' %>">Certificados</a>
+          <a href="/usuarios" class="<%= currentPath.startsWith('/usuarios') ? 'active' : '' %>">Usuarios</a>
+          <a href="/saude" class="<%= currentPath.startsWith('/saude') ? 'active' : '' %>">Saude do sistema</a>
+        <% } %>
+        <% if (!locals.ehCliente) { %><a href="/assinatura" class="<%= currentPath.startsWith('/assinatura') ? 'active' : '' %>">Meu escritorio</a><% } %>
+        <% if (locals.ehAdmin && !locals.ehCliente && tem('chat_suporte')) { %><a href="/chat" class="<%= currentPath === '/chat' ? 'active' : '' %>">Suporte<% if (locals.chatNaoLidas) { %> <span class="tag tag-warn" title="Mensagens novas do suporte"><%= chatNaoLidas %></span><% } %></a><% } %>
+        <% if (locals.ehPlataforma) { %><a href="/plataforma/chat" class="<%= currentPath.startsWith('/plataforma/chat') ? 'active' : '' %>">Chat dos escritorios<% if (locals.chatSuporteNaoLidas) { %> <span class="tag tag-warn"><%= chatSuporteNaoLidas %></span><% } %></a><% } %>
+        <% if (locals.ehPlataforma) { %><a href="/plataforma" class="<%= currentPath.startsWith('/plataforma') ? 'active' : '' %>">Plataforma<% if (locals.mensagensNovas) { %> <span class="tag tag-warn" title="Mensagens novas do site"><%= mensagensNovas %></span><% } %></a><% } %>
+      </nav>
+      <% const menu = locals.empresasMenu || []; if (menu.length) { %>
+        <div class="nav-empresas">
+          <div class="nav-titulo"><%= locals.ehCliente ? 'Minhas empresas' : 'Clientes do escritorio' %></div>
+          <% if (menu.length <= 8) { %>
+            <% menu.forEach((e) => { const ativa = locals.empresaAtual && String(empresaAtual._id) === String(e._id); %>
+              <a href="/empresas/<%= e._id %>" class="<%= ativa ? 'active' : '' %>" title="<%= e.razaoSocial %>"><%= e.razaoSocial %></a>
+            <% }) %>
+          <% } else { %>
+            <select aria-label="Abrir a pagina do cliente" onchange="if(this.value)location.href='/empresas/'+this.value">
+              <option value="">Abrir cliente...</option>
+              <% menu.forEach((e) => { %><option value="<%= e._id %>" <%= locals.empresaAtual && String(empresaAtual._id) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option><% }) %>
+            </select>
+          <% } %>
+        </div>
+      <% } %>
+      <div class="sidebar-foot">
+        <% if (locals.user) { %>
+          <div class="user">
+            <div class="user-name"><%= user.nome %></div>
+            <div class="user-mail"><%= user.email %> · <%= ({ admin: 'administrador', operador: 'equipe', cliente: 'cliente do escritorio' })[user.role] || user.role %></div>
+          </div>
+          <a href="/minha-senha" class="btn-link">Trocar senha</a> ·
+          <form method="post" action="/logout"><button class="btn-link">Sair</button></form>
+        <% } %>
+      </div>
+    </aside>
+
+    <main class="content">
+      <% if (locals.acessoSuporte) { %>
+        <div class="flash flash-info" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <span>Voce esta acessando o escritorio <strong><%= acessoSuporte.nome %></strong> como suporte. O que fizer aqui vale para o escritorio.</span>
+          <form method="post" action="/suporte/voltar" class="inline"><button class="btn btn-sm btn-primary">Voltar para a plataforma</button></form>
+        </div>
+      <% } %>
+      <header class="topbar">
+        <h1><%= title %></h1>
+        <% if (locals.sefazAmbiente !== 'producao') { %>
+          <span class="tag tag-warn" title="Ambiente de testes da SEFAZ: nao existem notas reais.">SEFAZ: homologacao (testes)</span>
+        <% } %>
+      </header>
+
+      <% const ac = locals.acessoConta; if (ac && ac.aviso && (ac.motivo !== 'teste' || ac.diasRestantes <= 7) && !currentPath.startsWith('/assinatura')) { %>
+        <div class="flash <%= ac.motivo === 'teste' ? 'flash-info' : 'flash-erro' %> faixa-conta">
+          <span><%= ac.aviso %></span>
+          <a href="/assinatura#planos" class="btn btn-sm <%= ac.motivo === 'teste' ? '' : 'btn-primary' %>"><%= ac.motivo === 'teste' ? 'Contratar' : 'Regularizar' %></a>
+        </div>
+      <% } %>
+
+      <% (locals.alertaCertificados || []).forEach((c) => { %>
+        <div class="flash flash-erro">
+          Certificado <strong><%= c.apelido %></strong>
+          <%= c.vencido ? 'VENCEU em' : `vence em ${c.dias} dia(s), em` %>
+          <%= new Date(c.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>.
+          <%= c.vencido ? 'A captura desta empresa esta parada.' : 'Renove e envie o novo certificado para a captura nao parar.' %>
+          <% if (locals.ehAdmin) { %><a href="/certificados/novo" class="link">Enviar novo certificado</a><% } %>
+        </div>
+      <% }) %>
+
+      <% if (locals.empresaAtual) { %><%- include('empresas/_abas') %><% } %>
+
+      <% if (typeof flash !== 'undefined' && flash) { %>
+        <div class="flash flash-<%= flash.type %>"><%= flash.msg %></div>
+      <% } %>
+
+      <%- body %>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<%
+  const fmt = (d) => d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const tagLog = (l) => !l ? '' : l.status === 'sucesso' ? 'tag-ok' : l.status === 'erro' ? 'tag-err' : 'tag-warn';
+  const mb = (b) => (b / 1024 / 1024).toFixed(1) + ' MB';
+%>
+<section class="cards">
+<% if (plataforma) { %>  <div class="card stat">
+    <span class="stat-label">Banco de dados</span>
+    <span class="stat-value small-value"><span class="tag <%= banco.ok ? 'tag-ok' : 'tag-err' %>"><%= banco.ok ? 'conectado' : 'erro' %></span></span>
+    <span class="muted small"><%= banco.ok ? `MongoDB ${banco.versao} · ${banco.ms} ms` : banco.erro %></span>
+  </div><% } %>
+  <div class="card stat">
+    <span class="stat-label">Captura automatica</span>
+    <span class="stat-value small-value"><span class="tag <%= tarefas.captura.ativa ? (tarefas.captura.erro ? 'tag-err' : 'tag-ok') : 'tag-warn' %>"><%= tarefas.captura.ativa ? (tarefas.captura.rodando ? 'rodando agora' : 'ativa') : 'desligada' %></span></span>
+    <span class="muted small">Agenda "<%= tarefas.captura.agenda %>" · ultima: <%= fmt(tarefas.captura.ultima) %></span>
+  </div>
+<% if (plataforma) { %>  <div class="card stat">
+    <span class="stat-label">Backup</span>
+    <span class="stat-value small-value"><span class="tag <%= backups.length ? 'tag-ok' : 'tag-warn' %>"><%= backups.length ? 'em dia' : 'nenhum ainda' %></span></span>
+    <span class="muted small"><%= backups.length ? `ultimo: ${fmt(backups[0].criadoEm)}` : (tarefas.backup.ativa ? `agenda "${tarefas.backup.agenda}"` : 'desligado') %></span>
+  </div><% } %>
+  <div class="card stat">
+    <span class="stat-label">Notas armazenadas</span>
+    <span class="stat-value"><%= totalNotas.toLocaleString('pt-BR') %></span>
+    <% if (plataforma) { %><span class="muted small">Servidor ativo ha <%= sistema.uptimeMin %> min · <%= sistema.memoriaMb %> MB</span><% } %>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Ultima captura por empresa</h2></div>
+  <% if (linhas.length === 0) { %>
+    <p class="muted">Nenhuma empresa cadastrada.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Empresa</th><th>Certificado</th><th>NF-e</th><th>NFS-e</th><th>CT-e</th></tr></thead>
+      <tbody>
+        <% linhas.forEach((e) => { %>
+          <tr>
+            <td><strong><%= e.razaoSocial %></strong><% if (e.rodando) { %> <span class="tag tag-warn">capturando</span><% } %></td>
+            <td>
+              <% if (!e.certificado) { %><span class="tag tag-err">sem certificado</span>
+              <% } else if (e.certDias < 0) { %><span class="tag tag-err">vencido</span>
+              <% } else if (e.certDias <= 30) { %><span class="tag tag-warn">vence em <%= e.certDias %> dia(s)</span>
+              <% } else { %><span class="tag tag-ok">ok</span> <span class="muted small"><%= e.certDias %> dias</span><% } %>
+            </td>
+            <% ['nfe', 'nfse', 'cte'].forEach((t) => { const l = e.porTipo[t]; %>
+              <td>
+                <% if (l) { %>
+                  <span class="tag <%= tagLog(l) %>"><%= l.status %></span>
+                  <div class="muted small"><%= fmt(l.createdAt) %></div>
+                  <% if (l.status !== 'sucesso') { %><div class="small"><%= l.mensagem %></div><% } %>
+                <% } else { %><span class="muted small">nunca</span><% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Erros nos ultimos 7 dias</h2></div>
+    <% if (errosSemana.length === 0) { %>
+      <p class="muted">Nenhum erro. </p>
+    <% } else { %>
+      <ul class="log-list">
+        <% errosSemana.forEach((l) => { %>
+          <li><span class="tag tag-err"><%= l.tipo.toUpperCase() %></span> <span class="muted"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= fmt(l.createdAt) %></span> <span class="log-msg"><%= l.mensagem %></span></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+
+<% if (plataforma) { %>  <section class="card">
+    <div class="card-head">
+      <h2>Backups</h2>
+      <form method="post" action="/saude/backup" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Gerando...'"><button class="btn btn-sm btn-primary">Fazer backup agora</button></form>
+    </div>
+    <% if (backups.length === 0) { %>
+      <p class="muted">Nenhum backup ainda.</p>
+    <% } else { %>
+      <ul class="log-list">
+        <% backups.forEach((b) => { %>
+          <li><strong><%= b.nome %></strong> <span class="muted small"><%= mb(b.bytes) %> · <%= b.colecoes %> colecoes</span></li>
+        <% }) %>
+      </ul>
+      <p class="muted small"><%= totalBackups %> backup(s) guardado(s). Para restaurar: pare o sistema e rode <code>npm run restaurar</code>.</p>
+    <% } %>
+    <% if (tarefas.backup.erro) { %><p class="small"><span class="tag tag-err">ultimo erro</span> <%= tarefas.backup.erro %></p><% } %>
+  </section><% } %>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Alertas por e-mail</h2>
+    <% if (email.ativo) { %><form method="post" action="/saude/email-teste"><button class="btn btn-sm">Enviar e-mail de teste</button></form><% } %>
+  </div>
+  <% if (email.ativo) { %>
+    <p><span class="tag tag-ok">ativos</span> Destinatarios: <%= email.para.length ? email.para.join(', ') : 'administradores da conta' %>. <a class="link" href="/assinatura#dados">Alterar</a></p>
+    <p class="muted small">Resumo apos cada captura automatica (notas novas, canceladas, erros) e, todo dia as 07:50, certificados vencendo e prazos de manifestacao.</p>
+  <% } else { %>
+    <p><span class="tag tag-warn">desligados</span> O envio de e-mails ainda nao foi configurado no servidor.</p><% if (plataforma) { %><p>Para ligar, preencha no ambiente:</p>
+    <pre class="codigo">SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USUARIO=seu-email@gmail.com
+SMTP_SENHA=senha-de-app
+SMTP_REMETENTE=Captura Total &lt;seu-email@gmail.com&gt;
+ALERTA_EMAIL_PARA=voce@empresa.com.br</pre>
+    <p class="muted small">No Gmail, use uma "senha de app" (exige verificacao em duas etapas).</p><% } %>
+  <% } %>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Sistema</h2></div>
+  <ul class="kv">
+    <li><span class="muted">Ambiente SEFAZ</span><span><%= sistema.ambiente %></span></li>
+    <% if (plataforma) { %><li><span class="muted">Node.js</span><span><%= sistema.node %></span></li>
+    <li><span class="muted">Servidor</span><span><%= sistema.host %></span></li><% } %>
+    <li><span class="muted">Certificados cadastrados</span><span><%= sistema.certificadosCadastrados %></span></li>
+  </ul>
+</section>

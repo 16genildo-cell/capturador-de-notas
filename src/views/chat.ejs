@@ -1,0 +1,16 @@
+<%- include('_chat-estilo') %>
+<section class="card" id="chat" data-modo="escritorio">
+  <div class="card-head">
+    <h2>Conversa com o suporte</h2>
+    <span class="chat-estado" data-estado>Conectando...</span>
+  </div>
+  <p class="muted small">Fale direto com a nossa equipe. As respostas aparecem aqui na hora; se voce nao estiver com esta pagina aberta, avisamos por e-mail.</p>
+  <div class="chat-caixa">
+    <div class="chat-mensagens" data-mensagens aria-live="polite"></div>
+    <form class="chat-form" data-form>
+      <textarea maxlength="2000" placeholder="Escreva sua mensagem (Enter envia, Shift+Enter quebra linha)" required></textarea>
+      <button class="btn btn-primary">Enviar</button>
+    </form>
+  </div>
+</section>
+<script src="/static/js/chat.js"></script>

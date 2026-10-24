@@ -1,0 +1,143 @@
+<%
+  const brl = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+  const fmt = (d) => d ? new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-';
+  const sitManif = { pendente: 'pendente', ciencia: 'ciencia', confirmada: 'confirmada', desconhecida: 'desconhecida', nao_realizada: 'operacao nao realizada', nao_aplicavel: '' };
+  const nomeEvento = { 110111: 'Cancelamento', 110110: 'Carta de correcao', 210200: 'Confirmacao da operacao', 210210: 'Ciencia da operacao', 210220: 'Desconhecimento da operacao', 210240: 'Operacao nao realizada', 101101: 'Cancelamento de NFS-e' };
+  const ehNFeRecebida = nota.tipo === 'nfe' && nota.papel === 'destinatario' && !nota.cancelada;
+%>
+<div class="page-actions row-actions">
+  <a href="javascript:history.back()" class="btn btn-ghost">Voltar</a>
+  <% if (!nota.xmlApagadoEm) { %>
+  <a href="<%= base %>/notas/<%= nota._id %>/pdf" target="_blank" class="btn btn-primary">Ver PDF</a>
+  <a href="<%= base %>/notas/<%= nota._id %>/pdf?baixar=1" class="btn">Baixar PDF</a>
+  <a href="<%= base %>/notas/<%= nota._id %>/xml" class="btn">Baixar XML</a>
+  <% } %>
+</div>
+<% if (nota.xmlApagadoEm) { %>
+<div class="flash flash-info">O arquivo desta nota foi apagado do sistema em <%= new Date(nota.xmlApagadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>, conforme o plano do escritorio. Use o arquivo que voce baixou ou consulte a nota pela chave no portal da SEFAZ.</div>
+<% } %>
+
+<section class="cards">
+  <div class="card stat">
+    <span class="stat-label">Valor</span>
+    <span class="stat-value">R$ <%= brl(nota.valorTotal) %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Emissao</span>
+    <span class="stat-value small-value"><%= fmt(nota.dataEmissao) %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Situacao</span>
+    <span class="stat-value small-value">
+      <% if (nota.cancelada) { %><span class="tag tag-err">cancelada</span>
+      <% } else if (nota.resumo) { %><span class="tag tag-warn">so resumo</span>
+      <% } else { %><span class="tag tag-ok">autorizada</span><% } %>
+    </span>
+    <span class="muted small"><%= { emitente: 'emitida / prestada', destinatario: 'recebida / tomada' }[nota.papel] || '' %> · <%= nota.empresa ? nota.empresa.razaoSocial : '' %></span>
+  </div>
+  <% if (ehNFeRecebida) { %>
+    <div class="card stat">
+      <span class="stat-label">Manifestacao</span>
+      <span class="stat-value small-value"><span class="tag <%= ['confirmada'].includes(nota.situacaoManifestacao) ? 'tag-ok' : 'tag-warn' %>"><%= sitManif[nota.situacaoManifestacao] || nota.situacaoManifestacao %></span></span>
+      <% if (prazo && ['pendente', 'ciencia'].includes(nota.situacaoManifestacao)) { %><span class="muted small">prazo ate <%= prazo.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></span><% } %>
+    </div>
+  <% } %>
+</section>
+
+<% if (nota.chave) { %>
+  <div class="card" style="padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: var(--surface-2);">
+    <div>
+      <span class="muted small" style="text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; display: block; margin-bottom: 2px;">Chave de Acesso (44 dígitos)</span>
+      <span class="mono" style="font-size: 0.95rem; color: var(--text-heading); letter-spacing: 0.04em;"><%= nota.chave.replace(/(\d{4})(?=\d)/g, '$1 ') %></span>
+    </div>
+    <button type="button" class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText('<%= nota.chave %>').then(()=>{this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar chave',2000)})">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      Copiar chave
+    </button>
+  </div>
+<% } %>
+<% if (nota.mensagemManifestacao) { %><div class="flash flash-info"><%= nota.mensagemManifestacao %></div><% } %>
+
+<% if (!locals.ehCliente && ehNFeRecebida && (nota.resumo || ['pendente', 'ciencia'].includes(nota.situacaoManifestacao))) { %>
+  <section class="card">
+    <div class="card-head"><h2>Manifestacao do destinatario</h2></div>
+    <div class="row-actions">
+      <% if (nota.resumo) { %>
+        <form method="post" action="<%= base %>/notas/<%= nota._id %>/ciencia" class="inline"><button class="btn btn-primary">Dar ciencia e baixar XML completo</button></form>
+      <% } %>
+      <% if (locals.ehAdmin) { %>
+        <form method="post" action="<%= base %>/notas/<%= nota._id %>/manifestar" class="inline" onsubmit="return confirm('Confirmar esta operacao na SEFAZ?')">
+          <input type="hidden" name="tipo" value="confirmacao" /><button class="btn">Confirmar operacao</button>
+        </form>
+        <form method="post" action="<%= base %>/notas/<%= nota._id %>/manifestar" class="inline" onsubmit="return confirm('Informar a SEFAZ que voce DESCONHECE esta operacao?')">
+          <input type="hidden" name="tipo" value="desconhecimento" /><button class="btn btn-danger">Desconhecer</button>
+        </form>
+        <details class="inline-det">
+          <summary class="btn">Operacao nao realizada</summary>
+          <form method="post" action="<%= base %>/notas/<%= nota._id %>/manifestar" class="form form-mini">
+            <input type="hidden" name="tipo" value="naoRealizada" />
+            <input type="text" name="justificativa" minlength="15" maxlength="255" required placeholder="Justificativa (15 a 255 caracteres)" />
+            <button class="btn btn-sm">Enviar</button>
+          </form>
+        </details>
+      <% } %>
+    </div>
+    <p class="muted small">Confirmar, desconhecer ou "nao realizada" sao manifestacoes definitivas na SEFAZ (prazo de 180 dias da emissao).</p>
+  </section>
+<% } %>
+
+<% if (detalhe) { %>
+  <div class="grid-3">
+    <% detalhe.blocos.forEach((b) => { %>
+      <section class="card">
+        <div class="card-head"><h2><%= b.titulo %></h2></div>
+        <ul class="kv">
+          <% b.campos.forEach(([k, v]) => { %><li><span class="muted"><%= k %></span><span class="kv-valor"><%= v %></span></li><% }) %>
+        </ul>
+      </section>
+    <% }) %>
+  </div>
+
+  <% if (detalhe.itens.length) { %>
+    <section class="card">
+      <div class="card-head"><h2><%= nota.tipo === 'cte' ? 'Componentes do frete' : 'Itens' %> (<%= detalhe.itens.length %>)</h2></div>
+      <div class="tabela-rolagem">
+      <table class="table">
+        <thead><tr><% detalhe.colunas.forEach((c, i) => { %><th class="<%= (detalhe.numericas || []).includes(i) ? 'dir' : '' %>"><%= c %></th><% }) %></tr></thead>
+        <tbody>
+          <% detalhe.itens.forEach((linha) => { %>
+            <tr><% linha.forEach((v, i) => { const n = (detalhe.numericas || []).includes(i); %><td class="<%= n ? 'dir nowrap' : '' %>"><%= n ? (i === 5 && detalhe.colunas.length > 2 ? num(v) : brl(v)) : v %></td><% }) %></tr>
+          <% }) %>
+        </tbody>
+      </table>
+      </div>
+    </section>
+  <% } %>
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head"><h2>Totais</h2></div>
+      <ul class="kv"><% detalhe.totais.forEach(([k, v]) => { %><li><span class="muted"><%= k %></span><span><%= /Aliquota/.test(k) ? num(v) : 'R$ ' + brl(v) %></span></li><% }) %></ul>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Eventos</h2></div>
+      <% if (eventos.length === 0) { %><p class="muted">Nenhum evento registrado para este documento.</p><% } else { %>
+        <ul class="log-list">
+          <% eventos.forEach((e) => { %>
+            <li><span class="tag tag-evento"><%= nomeEvento[e.tpEvento] || ('evento ' + (e.tpEvento || '')) %></span> <span class="muted"><%= fmt(e.dataEmissao) %></span></li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+  </div>
+
+  <% if (detalhe.observacoes) { %>
+    <section class="card">
+      <div class="card-head"><h2>Informacoes complementares</h2></div>
+      <p class="pre-wrap small"><%= detalhe.observacoes %></p>
+    </section>
+  <% } %>
+<% } else { %>
+  <div class="card"><p class="muted">Nao foi possivel ler os detalhes deste documento. Use o PDF ou o XML.</p></div>
+<% } %>

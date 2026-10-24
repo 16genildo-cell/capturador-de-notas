@@ -1,0 +1,203 @@
+<%
+  const v = (k, padrao = '') => (form[k] !== undefined && form[k] !== null ? form[k] : padrao);
+  const marcado = (k) => (form[k] === 'on' || form[k] === true ? 'checked' : '');
+  const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const tagStatus = { autorizada: 'tag-ok', rejeitada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' };
+  const txtStatus = { autorizada: 'autorizada', rejeitada: 'rejeitada', sem_resposta: 'sem resposta', cancelada: 'cancelada' };
+%>
+
+<% if (habilitadas.length === 0) { %>
+  <section class="card">
+    <div class="card-head"><h2>Configure a emissao primeiro</h2></div>
+    <p class="muted">Nenhuma empresa esta com a emissao de NFS-e ativada. Escolha a empresa e informe o regime tributario, o municipio e a serie:</p>
+    <div class="row-actions">
+      <% empresas.forEach((e) => { %>
+        <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/configurar/<%= e._id %>" class="btn btn-primary">Configurar <%= e.razaoSocial %></a><% } %>
+      <% }) %>
+      <% if (!locals.ehAdmin) { %><p class="muted small">Peca a um administrador para configurar.</p><% } %>
+    </div>
+  </section>
+<% } else { %>
+
+<% const cfg = empresaSel.emissaoNfse || {}; %>
+<% if (cfg.ambiente !== 'producao') { %>
+  <div class="flash flash-info">
+    <strong><%= empresaSel.razaoSocial %> esta em PRODUCAO RESTRITA (teste):</strong> as notas emitidas aqui nao tem valor fiscal.
+    Quando estiver tudo certo, mude para producao em <a href="<%= base %>/emitir/configurar/<%= empresaSel._id %>" class="link">configurar</a>.
+  </div>
+<% } %>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Emissao rapida</h2>
+    <a href="<%= base %>/emitir/servicos?empresa=<%= empresaSel._id %>" class="link"><%= locals.ehAdmin ? 'cadastrar / editar servicos' : 'ver servicos' %></a>
+  </div>
+  <% if (!servicos.length) { %>
+    <p class="muted small">Cadastre os servicos que voce presta e emita cada nota com um clique.<% if (locals.ehAdmin) { %> <a href="<%= base %>/emitir/servicos/novo?empresa=<%= empresaSel._id %>" class="link">Cadastrar o primeiro servico</a><% } %></p>
+  <% } else { %>
+    <%- include('_servicos-cards', { servicos, cfg, hoje }) %>
+  <% } %>
+</section>
+
+<details class="card form-avulsa" <%= Object.keys(form).length || !servicos.length ? 'open' : '' %>>
+  <summary class="card-head"><h2>Nota avulsa (preencher tudo)</h2></summary>
+<form method="post" action="<%= base %>/emitir" class="form" id="formulario"
+      onsubmit="var b=this.querySelector('[type=submit]');b.disabled=true;b.textContent='Enviando para a Sefin Nacional...'">
+  <section class="card">
+    <div class="card-head">
+      <h2>Prestador</h2>
+      <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/configurar/<%= empresaSel._id %>" class="link">configurar</a><% } %>
+    </div>
+    <div class="form-row">
+      <label>Empresa / pessoa
+        <% if (locals.empresaAtual) { %>
+          <input type="hidden" name="empresa" value="<%= empresaSel._id %>" />
+          <input type="text" value="<%= empresaSel.razaoSocial %>" readonly />
+        <% } else { %>
+        <select name="empresa" onchange="location.href='/emitir?empresa='+this.value">
+          <% habilitadas.forEach((e) => { %>
+            <option value="<%= e._id %>" <%= String(e._id) === String(empresaSel._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
+          <% }) %>
+        </select>
+        <% } %>
+      </label>
+      <div class="kv-bloco small">
+        <div><span class="muted">Regime:</span> <%= OP_SIMP_NAC[cfg.opSimpNac] %></div>
+        <div><span class="muted">Municipio (IBGE):</span> <%= empresaSel.municipioCodigo %> · <span class="muted">Serie:</span> <%= cfg.serie %> · <span class="muted">Proxima DPS:</span> <%= Number((cfg.numeracao || {})[cfg.ambiente] || 0) + 1 %></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Tomador (cliente)</h2></div>
+    <div class="form-row">
+      <label>Tipo
+        <select name="tomadorTipo" id="tomadorTipo">
+          <option value="cpf" <%= v('tomadorTipo') === 'cpf' ? 'selected' : '' %>>Pessoa fisica (CPF)</option>
+          <option value="cnpj" <%= v('tomadorTipo', 'cnpj') === 'cnpj' ? 'selected' : '' %>>Empresa (CNPJ)</option>
+          <option value="nenhum" <%= v('tomadorTipo') === 'nenhum' ? 'selected' : '' %>>Nao identificado</option>
+        </select>
+      </label>
+      <label class="tomador-campo">CPF / CNPJ <input type="text" name="tomadorDocumento" value="<%= v('tomadorDocumento') %>" inputmode="numeric" /></label>
+    </div>
+    <div class="form-row tomador-campo">
+      <label>Nome / razao social <input type="text" name="tomadorNome" value="<%= v('tomadorNome') %>" maxlength="300" /></label>
+      <label>E-mail (opcional) <input type="email" name="tomadorEmail" value="<%= v('tomadorEmail') %>" /></label>
+    </div>
+    <details class="tomador-campo" <%= v('tomadorCep') ? 'open' : '' %>>
+      <summary class="link small">Endereco do tomador (opcional)</summary>
+      <div class="form-row">
+        <label>CEP <input type="text" name="tomadorCep" id="tomadorCep" value="<%= v('tomadorCep') %>" inputmode="numeric" placeholder="preenche o resto sozinho" /></label>
+        <label>Cidade <input type="text" name="tomadorCidade" id="tomadorCidade" value="<%= v('tomadorCidade') %>" readonly /></label>
+      </div>
+      <input type="hidden" name="tomadorCMun" id="tomadorCMun" value="<%= v('tomadorCMun') %>" />
+      <div class="form-row">
+        <label>Logradouro <input type="text" name="tomadorLogradouro" id="tomadorLogradouro" value="<%= v('tomadorLogradouro') %>" /></label>
+        <label>Numero <input type="text" name="tomadorNumero" value="<%= v('tomadorNumero') %>" /></label>
+      </div>
+      <div class="form-row">
+        <label>Complemento <input type="text" name="tomadorComplemento" value="<%= v('tomadorComplemento') %>" /></label>
+        <label>Bairro <input type="text" name="tomadorBairro" id="tomadorBairro" value="<%= v('tomadorBairro') %>" /></label>
+      </div>
+      <input type="hidden" name="tomadorFone" value="<%= v('tomadorFone') %>" />
+    </details>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Servico</h2></div>
+    <div class="form-row">
+      <label>Codigo de tributacao nacional (LC 116) *
+        <input type="text" name="cTribNac" value="<%= v('cTribNac', cfg.cTribNac || '') %>" list="codigos-usados" required placeholder="ex.: 01.07.01" />
+        <datalist id="codigos-usados">
+          <% codigosUsados.forEach((c) => { %><option value="<%= c._id %>"><%= c.descricao %></option><% }) %>
+        </datalist>
+      </label>
+      <label>Codigo NBS (opcional) <input type="text" name="cNBS" value="<%= v('cNBS', cfg.cNBS || '') %>" placeholder="9 digitos" /></label>
+    </div>
+    <label>Descricao do servico *
+      <textarea name="descricao" rows="3" maxlength="2000" required><%= v('descricao', cfg.descricaoPadrao || '') %></textarea>
+    </label>
+    <div class="form-row">
+      <label>Valor do servico (R$) * <input type="text" name="valor" value="<%= v('valor') %>" inputmode="decimal" required placeholder="0,00" /></label>
+      <label>Desconto incondicionado (R$) <input type="text" name="desconto" value="<%= v('desconto') %>" inputmode="decimal" placeholder="0,00" /></label>
+    </div>
+    <div class="form-row">
+      <label>Competencia <input type="date" name="competencia" value="<%= v('competencia', hoje) %>" max="<%= hoje %>" /></label>
+      <label>Municipio da prestacao (codigo IBGE) <input type="text" name="cLocPrestacao" value="<%= v('cLocPrestacao', empresaSel.municipioCodigo || '') %>" inputmode="numeric" maxlength="7" /></label>
+    </div>
+    <div class="form-row">
+      <label class="check"><input type="checkbox" name="issRetido" <%= marcado('issRetido') %> /> ISS retido pelo tomador</label>
+      <label class="check"><input type="checkbox" name="naoIncidencia" <%= marcado('naoIncidencia') %> /> Operacao sem incidencia de ISS</label>
+    </div>
+    <% if (cfg.opSimpNac === '3') { %>
+      <label>Aliquota do ISS no Simples (%) - deixe vazio para a do municipio
+        <input type="text" name="aliquota" value="<%= v('aliquota') %>" inputmode="decimal" placeholder="ex.: 2,00" />
+      </label>
+    <% } %>
+    <label>Informacoes complementares (opcional) <input type="text" name="infoComplementar" value="<%= v('infoComplementar') %>" maxlength="2000" /></label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Emitir NFS-e<%= cfg.ambiente !== 'producao' ? ' (teste)' : '' %></button>
+    </div>
+    <p class="muted small">O codigo de tributacao nacional segue a lista da LC 116 com 6 digitos (item, subitem e desdobro). Em caso de duvida, confira com o seu contador ou no Emissor Nacional.</p>
+  </section>
+</form>
+</details>
+<% } %>
+
+<section class="card">
+  <div class="card-head"><h2>Notas emitidas</h2></div>
+  <% if (historico.length === 0) { %>
+    <p class="muted">Nenhuma emissao ainda.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Data</th><th>Situacao</th><th>DPS</th><th>Tomador</th><th>Servico</th><th class="dir">Valor</th><th></th></tr></thead>
+      <tbody>
+        <% historico.forEach((h) => { %>
+          <tr>
+            <td class="muted small nowrap"><%= new Date(h.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></td>
+            <td>
+              <span class="tag <%= tagStatus[h.status] %>"><%= txtStatus[h.status] %></span>
+              <% if (h.ambiente !== 'producao') { %><span class="tag tag-warn" title="Producao restrita: sem valor fiscal">teste</span><% } %>
+            </td>
+            <td class="small"><%= h.serie %>/<%= h.nDPS %></td>
+            <td><%= h.tomadorNome || '-' %></td>
+            <td class="small"><%= (h.descricao || '').slice(0, 60) %></td>
+            <td class="dir nowrap">R$ <%= brl(h.valor) %></td>
+            <td class="row-actions">
+              <a href="<%= base %>/emitir/<%= h._id %>" class="link">abrir</a>
+              <% if (h.status === 'autorizada' || h.status === 'cancelada') { %><a href="<%= base %>/emitir/<%= h._id %>/pdf" target="_blank" class="link">PDF</a><% } %>
+              <a href="<%= base %>/emitir?de=<%= h._id %>#formulario" class="link" title="Abrir o formulario com estes dados">repetir</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>
+
+<script>
+  (function () {
+    var tipo = document.getElementById('tomadorTipo');
+    if (!tipo) return;
+    function alternar() {
+      document.querySelectorAll('.tomador-campo').forEach(function (el) { el.style.display = tipo.value === 'nenhum' ? 'none' : ''; });
+    }
+    tipo.addEventListener('change', alternar);
+    alternar();
+    // CEP -> endereco e codigo IBGE (ViaCEP)
+    var cep = document.getElementById('tomadorCep');
+    if (cep) cep.addEventListener('blur', function () {
+      var n = cep.value.replace(/\D/g, '');
+      if (n.length !== 8) return;
+      fetch('https://viacep.com.br/ws/' + n + '/json/').then(function (r) { return r.json(); }).then(function (d) {
+        if (d.erro) return;
+        document.getElementById('tomadorCMun').value = d.ibge || '';
+        document.getElementById('tomadorCidade').value = (d.localidade || '') + (d.uf ? ' - ' + d.uf : '');
+        var lg = document.getElementById('tomadorLogradouro'); if (!lg.value) lg.value = d.logradouro || '';
+        var br = document.getElementById('tomadorBairro'); if (!br.value) br.value = d.bairro || '';
+      }).catch(function () {});
+    });
+  })();
+</script>

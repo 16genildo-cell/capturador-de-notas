@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %> · <%= locals.nomeProduto || 'Captura Total' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/static/css/app.css" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+  <style>body.ent { margin: 0; }</style>
+</head>
+<body class="ent">
+  <aside class="ent-painel" aria-hidden="true">
+    <a href="/" class="lp-marca" tabindex="-1"><span class="selo">CT</span><%= locals.nomeProduto || 'Captura Total' %></a>
+    <div>
+      <blockquote>Toda manhã, as notas dos seus clientes já estão aqui.</blockquote>
+      <p>XML, PDF e prazos de manifestação de cada CNPJ da carteira, sem baixar nada à mão.</p>
+    </div>
+    <div class="ent-chave">
+      <div>3526 1012 3456 7800 0190 5500 1000 0045 1210 0004 5127</div>
+      <div><b>3526 1098 7654 3200 0155 5700 1000 0881 0410 0088 1046</b></div>
+      <div>3526 1045 6789 0100 0123 6500 2000 0197 7610 0019 7768</div>
+    </div>
+  </aside>
+  <main class="ent-lado">
+    <div class="ent-caixa">
+      <a href="/" class="lp-marca"><span class="selo" aria-hidden="true">CT</span><%= locals.nomeProduto || 'Captura Total' %></a>
+      <% if (typeof flash !== 'undefined' && flash) { %>
+        <div class="ent-aviso <%= flash.type === 'erro' ? 'erro' : flash.type === 'ok' ? 'ok' : 'info' %>" role="<%= flash.type === 'erro' ? 'alert' : 'status' %>" style="margin-bottom:18px"><%= flash.msg %></div>
+      <% } %>
+      <%- body %>
+    </div>
+  </main>
+</body>
+</html>

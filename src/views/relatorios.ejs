@@ -1,0 +1,117 @@
+<%
+  const brl = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nomesMes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const rotMes = (m) => { const [a, mm] = m.split('-'); return `${nomesMes[Number(mm) - 1]}/${a.slice(2)}`; };
+  const maxV = Math.max(1, ...meses.map((m) => Math.max(m.entradas.valor, m.saidas.valor)));
+  const tot = meses.reduce((a, m) => ({ e: a.e + m.entradas.valor, s: a.s + m.saidas.valor, eq: a.eq + m.entradas.qtd, sq: a.sq + m.saidas.qtd }), { e: 0, s: 0, eq: 0, sq: 0 });
+  const anoAtual = new Date().getFullYear();
+%>
+<form method="get" action="<%= base %>/relatorios" class="filters card">
+  <label class="filtro">Ano
+    <select name="ano">
+      <% for (let a = anoAtual; a >= anoAtual - 5; a -= 1) { %><option value="<%= a %>" <%= String(filtros.ano) === String(a) ? 'selected' : '' %>><%= a %></option><% } %>
+    </select>
+  </label>
+  <label class="filtro">De <input type="date" name="de" value="<%= filtros.de %>" /></label>
+  <label class="filtro">Ate <input type="date" name="ate" value="<%= filtros.ate %>" /></label>
+  <label class="filtro">Tipo
+    <select name="categoria">
+      <option value="">Todos</option>
+      <% Object.entries(categorias).filter(([k]) => k !== 'eventos').forEach(([k, c]) => { %><option value="<%= k %>" <%= filtros.categoria === k ? 'selected' : '' %>><%= c.rotulo %></option><% }) %>
+    </select>
+  </label>
+  <% if (empresas.length > 1) { %>
+    <label class="filtro">Cliente
+      <select name="empresa">
+        <option value="">Todas</option>
+        <% empresas.forEach((e) => { %><option value="<%= e._id %>" <%= String(filtros.empresa) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option><% }) %>
+      </select>
+    </label>
+  <% } %>
+  <button class="btn btn-primary">Atualizar</button>
+  <a href="<%= base %>/relatorios/excel?<%= qs({}) %>" class="btn">Baixar Excel</a>
+</form>
+
+<section class="cards totais">
+  <div class="card stat"><span class="stat-label">Entradas (recebidas/tomadas)</span><span class="stat-value small-value">R$ <%= brl(tot.e) %></span><span class="muted small"><%= tot.eq %> documento(s)</span></div>
+  <div class="card stat"><span class="stat-label">Saidas (emitidas/prestadas)</span><span class="stat-value small-value">R$ <%= brl(tot.s) %></span><span class="muted small"><%= tot.sq %> documento(s)</span></div>
+  <div class="card stat"><span class="stat-label">Saldo (saidas - entradas)</span><span class="stat-value small-value">R$ <%= brl(tot.s - tot.e) %></span></div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Entradas x saidas por mes</h2>
+    <span class="legenda"><i class="leg leg-entrada"></i> entradas <i class="leg leg-saida"></i> saidas</span>
+  </div>
+  <% if (meses.length === 0) { %>
+    <p class="muted">Sem notas no periodo.</p>
+  <% } else { %>
+    <div class="grafico-barras" role="img" aria-label="Grafico de entradas e saidas por mes">
+      <% meses.forEach((m) => { %>
+        <div class="gb-coluna" title="<%= rotMes(m.mes) %>: entradas R$ <%= brl(m.entradas.valor) %> / saidas R$ <%= brl(m.saidas.valor) %>">
+          <div class="gb-barras">
+            <div class="gb-barra entrada" style="height: <%= (m.entradas.valor / maxV * 100).toFixed(1) %>%"></div>
+            <div class="gb-barra saida" style="height: <%= (m.saidas.valor / maxV * 100).toFixed(1) %>%"></div>
+          </div>
+          <span class="gb-rotulo"><%= rotMes(m.mes) %></span>
+        </div>
+      <% }) %>
+    </div>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Mes</th><th class="dir">Entradas</th><th class="dir">Saidas</th><th class="dir">Produtos</th><th class="dir">Servicos</th><th class="dir">Transporte</th></tr></thead>
+      <tbody>
+        <% meses.forEach((m) => { %>
+          <tr>
+            <td><%= rotMes(m.mes) %></td>
+            <td class="dir">R$ <%= brl(m.entradas.valor) %> <span class="muted small">(<%= m.entradas.qtd %>)</span></td>
+            <td class="dir">R$ <%= brl(m.saidas.valor) %> <span class="muted small">(<%= m.saidas.qtd %>)</span></td>
+            <td class="dir">R$ <%= brl(m.produtos) %></td>
+            <td class="dir">R$ <%= brl(m.servicos) %></td>
+            <td class="dir">R$ <%= brl(m.transporte) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <% [['Maiores fornecedores / prestadores', fornecedores], ['Maiores clientes / tomadores', clientes]].forEach(([titulo, linhas]) => { %>
+    <section class="card">
+      <div class="card-head"><h2><%= titulo %></h2></div>
+      <% if (linhas.length === 0) { %><p class="muted">Sem dados no periodo.</p><% } else { %>
+        <table class="table">
+          <thead><tr><th>Nome</th><th>CNPJ/CPF</th><th class="dir">Notas</th><th class="dir">Valor</th></tr></thead>
+          <tbody>
+            <% linhas.forEach((l) => { %>
+              <tr><td><%= l.nome %></td><td class="small nowrap"><%= l.documento %></td><td class="dir"><%= l.qtd %></td><td class="dir nowrap">R$ <%= brl(l.valor) %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </section>
+  <% }) %>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Produtos por CFOP</h2></div>
+    <% if (itens.cfop.length === 0) { %><p class="muted">Sem NF-e com XML completo no periodo.</p><% } else { %>
+      <table class="table">
+        <thead><tr><th>CFOP</th><th class="dir">Itens</th><th class="dir">Valor</th></tr></thead>
+        <tbody><% itens.cfop.forEach((l) => { %><tr><td><%= l.cfop %></td><td class="dir"><%= l.itens %></td><td class="dir nowrap">R$ <%= brl(l.valor) %></td></tr><% }) %></tbody>
+      </table>
+    <% } %>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Produtos por NCM</h2></div>
+    <% if (itens.ncm.length === 0) { %><p class="muted">Sem NF-e com XML completo no periodo.</p><% } else { %>
+      <table class="table">
+        <thead><tr><th>NCM</th><th>Exemplo</th><th class="dir">Itens</th><th class="dir">Valor</th></tr></thead>
+        <tbody><% itens.ncm.slice(0, 20).forEach((l) => { %><tr><td><%= l.ncm %></td><td class="small"><%= l.descricao %></td><td class="dir"><%= l.itens %></td><td class="dir nowrap">R$ <%= brl(l.valor) %></td></tr><% }) %></tbody>
+      </table>
+    <% } %>
+    <% if (itens.limitado) { %><p class="muted small">Considerando as <%= itens.notasLidas %> primeiras notas do periodo. Use um periodo menor para o total exato.</p><% } %>
+  </section>
+</div>

@@ -1,0 +1,6 @@
+{
+  "name": "danfse-nacional-vendor",
+  "private": true,
+  "type": "commonjs",
+  "description": "Copia de github.com/ebnack/danfse-nacional-node (MIT), commit 55f41e6, layout DANFSe NT 008/2026."
+}

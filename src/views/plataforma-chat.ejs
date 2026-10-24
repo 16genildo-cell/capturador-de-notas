@@ -1,0 +1,20 @@
+<%- include('_chat-estilo') %>
+<section class="card" id="chat" data-modo="suporte" data-conta="<%= contaInicial %>" data-nome="<%= nomeInicial %>">
+  <div class="card-head">
+    <h2>Conversas com os escritorios</h2>
+    <span class="chat-estado" data-estado>Conectando...</span>
+  </div>
+  <div class="chat-layout">
+    <nav class="chat-lista" data-conversas aria-label="Conversas"></nav>
+    <div class="chat-caixa">
+      <h3 style="margin:0 0 6px" data-titulo><%= nomeInicial %></h3>
+      <div class="chat-mensagens" data-mensagens aria-live="polite"></div>
+      <form class="chat-form" data-form hidden>
+        <textarea maxlength="2000" placeholder="Responder ao escritorio (Enter envia, Shift+Enter quebra linha)" required></textarea>
+        <button class="btn btn-primary">Enviar</button>
+      </form>
+    </div>
+  </div>
+  <p class="muted small">Para iniciar uma conversa com um escritorio que ainda nao escreveu, abra a pagina dele e clique em "Conversar no chat".</p>
+</section>
+<script src="/static/js/chat.js"></script>

@@ -1,0 +1,185 @@
+<% (locals.avisos || []).forEach((a) => { %>
+<div class="flash <%= a.tipo === 'importante' ? 'flash-erro' : 'flash-info' %>" style="white-space:pre-wrap">
+  <strong><%= a.tipo === 'manutencao' ? 'Manutencao programada: ' : '' %><%= a.titulo %></strong><% if (a.texto) { %><br><%= a.texto %><% } %>
+</div>
+<% }) %>
+<section class="cards">
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label"><%= locals.ehCliente ? 'Empresas' : 'Clientes' %></span>
+      <div class="stat-icon-wrapper" style="color: #6366f1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.totalEmpresas %></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Documentos</span>
+      <div class="stat-icon-wrapper" style="color: #38bdf8;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.totalNotas %></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">NF-e / NFC-e</span>
+      <div class="stat-icon-wrapper" style="color: #38bdf8;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.porTipo.nfe + stats.porTipo.nfce %></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">NFS-e</span>
+      <div class="stat-icon-wrapper" style="color: #c084fc;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.porTipo.nfse %></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">CT-e</span>
+      <div class="stat-icon-wrapper" style="color: #fb923c;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="13" x="4" y="5" rx="2"/><path d="M16 2v3"/><path d="M8 2v3"/><path d="M10 14l2 2 4-4"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= stats.porTipo.cte %></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Valor total</span>
+      <div class="stat-icon-wrapper" style="color: #34d399;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+    </div>
+    <span class="stat-value small-value mono">R$ <%= stats.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+  </div>
+</section>
+
+<%
+  const brl = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const nomesMes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const rotMes = (m) => { const [a, mm] = m.split('-'); return `${nomesMes[Number(mm) - 1]}/${a.slice(2)}`; };
+  const maxV = Math.max(1, ...meses.map((m) => Math.max(m.entradas.valor, m.saidas.valor)));
+  const tiposValor = [['Produtos', (stats.porTipoValor.nfe || 0) + (stats.porTipoValor.nfce || 0), 'tp-produtos'], ['Servicos', stats.porTipoValor.nfse || 0, 'tp-servicos'], ['Transporte', stats.porTipoValor.cte || 0, 'tp-transporte']];
+  const somaTipos = tiposValor.reduce((a, x) => a + x[1], 0) || 1;
+%>
+<% if (pendencias.manifestacao || pendencias.resumos) { %>
+  <div class="pendencias">
+    <% if (pendencias.resumos) { %>
+      <a href="/notas?situacao=resumo" class="chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span><strong><%= pendencias.resumos %></strong> nota(s) em resumo — baixar XML completo</span>
+      </a>
+    <% } %>
+    <% if (pendencias.manifestacao) { %>
+      <a href="/notas?situacao=manifestar" class="chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span><strong><%= pendencias.manifestacao %></strong> NF-e aguardando manifestação</span>
+      </a>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="grid-2 grid-painel">
+  <section class="card">
+    <div class="card-head">
+      <h2>Últimos 12 meses</h2>
+      <span class="legenda"><i class="leg leg-entrada"></i> entradas <i class="leg leg-saida"></i> saídas</span>
+    </div>
+    <% if (meses.length === 0) { %>
+      <p class="muted">Sem notas nos últimos 12 meses.</p>
+    <% } else { %>
+      <div class="grafico-barras" role="img" aria-label="Entradas e saídas por mês">
+        <% meses.forEach((m) => { %>
+          <div class="gb-coluna" title="<%= rotMes(m.mes) %>: entradas R$ <%= brl(m.entradas.valor) %> / saídas R$ <%= brl(m.saidas.valor) %>">
+            <div class="gb-barras">
+              <div class="gb-barra entrada" style="height: <%= (m.entradas.valor / maxV * 100).toFixed(1) %>%"></div>
+              <div class="gb-barra saida" style="height: <%= (m.saidas.valor / maxV * 100).toFixed(1) %>%"></div>
+            </div>
+            <span class="gb-rotulo"><%= rotMes(m.mes) %></span>
+          </div>
+        <% }) %>
+      </div>
+      <a href="/relatorios" class="link">Ver relatórios detalhados →</a>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Valor por tipo</h2></div>
+    <div class="barra-empilhada" role="img" aria-label="Distribuição do valor por tipo de documento">
+      <% tiposValor.forEach(([nome, v, cls]) => { if (v > 0) { %><span class="<%= cls %>" style="width: <%= (v / somaTipos * 100).toFixed(1) %>%"></span><% } }) %>
+    </div>
+    <ul class="kv">
+      <% tiposValor.forEach(([nome, v, cls]) => { %>
+        <li>
+          <span><i class="leg <%= cls %>"></i> <%= nome %></span>
+          <span class="mono">R$ <%= brl(v) %> <span class="muted small">(<%= (v / somaTipos * 100).toFixed(0) %>%)</span></span>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Últimas notas</h2>
+      <a href="/notas" class="link">Ver todas →</a>
+    </div>
+    <% if (ultimasNotas.length === 0) { %>
+      <p class="muted">Nenhuma nota capturada ainda. <a href="/captura" class="link">Ir para a Captura</a> para configurar e rodar.</p>
+    <% } else { %>
+      <div class="tabela-rolagem">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Emitente</th>
+              <th class="dir">Valor</th>
+              <th>Cliente</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% ultimasNotas.forEach((n) => { %>
+              <tr class="linha-nota" onclick="location.href='/notas/<%= n._id %>'">
+                <td><span class="tag tag-<%= n.tipo %>"><%= n.tipo.toUpperCase() %></span></td>
+                <td><strong><%= n.emitenteNome || n.emitenteCnpjCpf || '-' %></strong></td>
+                <td class="dir mono">R$ <%= (n.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+                <td class="muted"><% if (n.empresa) { %><a href="/empresas/<%= n.empresa._id %>" class="link" onclick="event.stopPropagation()"><%= n.empresa.razaoSocial %></a><% } else { %>-<% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Execuções recentes</h2></div>
+    <% if (ultimosLogs.length === 0) { %>
+      <p class="muted">Nenhuma execução de captura registrada.</p>
+    <% } else { %>
+      <ul class="log-list">
+        <% ultimosLogs.forEach((l) => { %>
+          <li>
+            <span class="tag tag-<%= l.status === 'sucesso' ? 'ok' : (l.status === 'erro' ? 'err' : 'warn') %>"><%= l.status %></span>
+            <strong><%= l.tipo.toUpperCase() %></strong>
+            <% if (l.empresa) { %><a href="/empresas/<%= l.empresa._id %>" class="link muted"><%= l.empresa.razaoSocial %></a><% } else { %><span class="muted">-</span><% } %>
+            <span class="log-msg"><%= l.novos %> nova(s) · <%= l.mensagem || '' %></span>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</div>
+

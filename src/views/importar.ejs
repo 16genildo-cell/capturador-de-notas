@@ -1,0 +1,60 @@
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Enviar arquivos</h2></div>
+    <form method="post" action="<%= base %>/importar" enctype="multipart/form-data" class="form"
+          onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Importando...'">
+      <label>Arquivos XML ou ZIP (pode selecionar varios)
+        <input type="file" name="arquivos" accept=".xml,.zip,application/xml,text/xml,application/zip" multiple required />
+      </label>
+      <label>Empresa
+        <select name="empresa">
+          <% if (locals.empresaAtual) { %>
+            <option value="">So os documentos em que este cliente aparece (recomendado)</option>
+            <option value="forcar">Todos os arquivos para <%= empresaAtual.razaoSocial %></option>
+          <% } else { %>
+            <option value="">Detectar pelo CNPJ/CPF do documento (recomendado)</option>
+            <% empresas.forEach((e) => { %><option value="<%= e._id %>"><%= e.razaoSocial %></option><% }) %>
+          <% } %>
+        </select>
+      </label>
+      <div class="form-actions"><button class="btn btn-primary">Importar</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Quando usar</h2></div>
+    <ul class="kv-lista small">
+      <li><strong>Notas de venda (emitidas por voce):</strong> a SEFAZ nao devolve as notas que a propria empresa emitiu. Exporte os XMLs do seu emissor e importe aqui.</li>
+      <li><strong>Historico antigo:</strong> a captura so alcanca os ultimos 90 dias; notas mais antigas entram por aqui.</li>
+      <li>Aceita NF-e, NFC-e, NFS-e (padrao nacional), CT-e e eventos (cancelamento etc.), soltos ou em ZIP.</li>
+      <li>Documentos repetidos sao ignorados; um XML completo substitui um resumo ja existente.</li>
+    </ul>
+  </section>
+</div>
+
+<% if (resultado) { const r = resultado.resumo; %>
+  <section class="cards">
+    <div class="card stat"><span class="stat-label">Arquivos lidos</span><span class="stat-value"><%= r.total %></span></div>
+    <div class="card stat"><span class="stat-label">Importados</span><span class="stat-value"><%= r.novos + r.atualizados %></span></div>
+    <div class="card stat"><span class="stat-label">Ja existiam</span><span class="stat-value"><%= r.duplicados %></span></div>
+    <div class="card stat"><span class="stat-label">Eventos aplicados</span><span class="stat-value"><%= r.eventos %></span></div>
+    <div class="card stat"><span class="stat-label">Sem cliente / invalidos</span><span class="stat-value"><%= r.semEmpresa + r.invalidos %></span></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Detalhes</h2><% if (r.novos + r.atualizados) { %><a href="<%= base %>/notas" class="link">ver notas</a><% } %></div>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Arquivo</th><th>Resultado</th><th>Cliente / motivo</th></tr></thead>
+      <tbody>
+        <% resultado.detalhes.slice(0, 300).forEach((d) => { %>
+          <tr>
+            <td class="small"><%= d.nome %></td>
+            <td><span class="tag <%= d.resultado === 'importado' || d.resultado.startsWith('resumo') ? 'tag-ok' : (d.resultado === 'ja existia' || d.resultado === 'evento aplicado' ? 'tag-nfe' : 'tag-err') %>"><%= d.resultado %></span></td>
+            <td class="small"><%= d.empresa || d.motivo || '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+    <% if (resultado.detalhes.length > 300) { %><p class="muted small">Mostrando 300 de <%= resultado.detalhes.length %>.</p><% } %>
+  </section>
+<% } %>

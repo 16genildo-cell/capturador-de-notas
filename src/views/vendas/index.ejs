@@ -1,0 +1,353 @@
+<%
+  const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const tagStatus = { autorizada: 'tag-ok', rejeitada: 'tag-err', denegada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' };
+  const txtStatus = { autorizada: 'autorizada', rejeitada: 'rejeitada', denegada: 'denegada', sem_resposta: 'sem resposta', cancelada: 'cancelada' };
+  const f = form || {};
+  const fd = f.dest || {};
+  const fp = f.pagamento || {};
+  const json = (o) => JSON.stringify(o).replace(/</g, '\\u003c');
+  const teste = empresaSel && (empresaSel.emissaoNfe || {}).ambiente !== 'producao' ? ' (teste)' : '';
+%>
+
+<% if (!empresaSel) { %>
+  <section class="card">
+    <div class="card-head"><h2>Configure a emissao primeiro</h2></div>
+    <p class="muted">Nenhuma empresa esta com a emissao de NF-e / NFC-e ativada. Para emitir e preciso: Inscricao Estadual, endereco completo, certificado A1 e, para NFC-e, o CSC gerado no portal da SEFAZ.</p>
+    <div class="row-actions">
+      <% empresas.forEach((e) => { %>
+        <% if (locals.ehAdmin) { %><a href="<%= base %>/vendas/configurar/<%= e._id %>" class="btn btn-primary">Configurar <%= e.razaoSocial %></a><% } %>
+      <% }) %>
+      <% if (!locals.ehAdmin) { %><p class="muted small">Peca a um administrador para configurar.</p><% } %>
+    </div>
+  </section>
+<% } else { const cfg = empresaSel.emissaoNfe || {}; %>
+
+<% if (habilitadas.length > 1 && !locals.empresaAtual) { %>
+  <nav class="chips">
+    <% habilitadas.forEach((e) => { %>
+      <a href="/vendas?empresa=<%= e._id %>" class="chip <%= String(e._id) === String(empresaSel._id) ? 'active' : '' %>"><%= e.razaoSocial %></a>
+    <% }) %>
+  </nav>
+<% } %>
+
+<% if (cfg.ambiente !== 'producao') { %>
+  <div class="flash flash-info">
+    <strong><%= empresaSel.razaoSocial %> esta em HOMOLOGACAO (teste):</strong> as notas sao enviadas ao ambiente de testes da SEFAZ e nao tem valor fiscal.
+    <% if (locals.ehAdmin) { %>Quando os testes derem certo, mude para producao em <a href="<%= base %>/vendas/configurar/<%= empresaSel._id %>" class="link">configurar</a>.<% } %>
+  </div>
+<% } %>
+
+<form method="post" action="<%= base %>/vendas" class="form venda" id="form-venda"
+      onsubmit="return window.enviarVenda ? window.enviarVenda(this) : true">
+  <input type="hidden" name="empresa" value="<%= empresaSel._id %>" />
+  <input type="hidden" name="modelo" id="modelo" value="<%= modelo %>" />
+
+  <div class="seletor-modelo" role="tablist">
+    <button type="button" class="sm-op <%= modelo === '65' ? 'active' : '' %>" data-modelo="65">
+      <strong>NFC-e</strong><span>Consumidor final / cupom</span>
+    </button>
+    <button type="button" class="sm-op <%= modelo === '55' ? 'active' : '' %>" data-modelo="55">
+      <strong>NF-e</strong><span>Venda para empresa (CNPJ) ou com entrega</span>
+    </button>
+    <span class="sm-links">
+      <a href="<%= base %>/vendas/produtos<%= locals.empresaAtual ? '' : '?empresa=' + empresaSel._id %>" class="link"><%= locals.ehAdmin ? 'cadastrar / editar produtos' : 'ver produtos' %></a>
+      <% if (locals.ehAdmin) { %><a href="<%= base %>/vendas/configurar/<%= empresaSel._id %>" class="link">configurar</a><% } %>
+    </span>
+  </div>
+
+  <div class="grid-venda">
+    <section class="card">
+      <div class="card-head"><h2>Produtos</h2><span class="muted small"><%= produtos.length %> cadastrado(s)</span></div>
+      <% if (!produtos.length) { %>
+        <p class="muted">Nenhum produto cadastrado.
+          <% if (locals.ehAdmin) { %><a href="<%= base %>/vendas/produtos/novo?empresa=<%= empresaSel._id %>" class="link">Cadastrar o primeiro produto</a><% } %></p>
+      <% } else { %>
+        <div class="busca-produto">
+          <input type="search" id="busca" placeholder="Buscar por nome, codigo ou codigo de barras e tecle Enter" autocomplete="off" />
+          <div id="sugestoes" class="sugestoes" hidden></div>
+        </div>
+        <div class="atalhos-produtos">
+          <% produtos.slice(0, 12).forEach((p) => { %>
+            <button type="button" class="ap-btn" data-add="<%= p._id %>" title="<%= p.descricao %>"><span><%= p.descricao %></span><strong>R$ <%= brl(p.preco) %></strong></button>
+          <% }) %>
+        </div>
+      <% } %>
+      <div class="tabela-rolagem">
+        <table class="table itens-venda">
+          <thead><tr><th>Produto</th><th class="dir">Qtde</th><th class="dir">Unit. R$</th><th class="dir">Desc. R$</th><th class="dir">Total</th><th></th></tr></thead>
+          <tbody id="itens"></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="sem-itens">Clique nos produtos ou busque acima para incluir na venda.</p>
+    </section>
+
+    <aside class="coluna-venda">
+      <section class="card">
+        <div class="card-head"><h2 id="titulo-cliente">Cliente</h2></div>
+        <div class="so-nfce">
+          <label>CPF ou CNPJ na nota (opcional)
+            <input type="text" name="destDocumento" id="destDocumento65" value="<%= modelo === '65' ? (fd.documento || '') : '' %>" inputmode="numeric" placeholder="consumidor nao identificado" />
+          </label>
+        </div>
+        <div class="so-nfe">
+          <label>CPF / CNPJ *
+            <input type="text" name="destDocumento" id="destDocumento55" value="<%= modelo === '55' ? (fd.documento || '') : '' %>" inputmode="numeric" />
+          </label>
+          <p class="muted small" id="busca-cnpj-msg"></p>
+          <label>Nome / razao social * <input type="text" name="destNome" id="destNome" value="<%= fd.nome || '' %>" maxlength="60" /></label>
+          <label>Situacao no ICMS
+            <select name="destIndIEDest" id="destIndIEDest">
+              <option value="1" <%= fd.indIEDest === '1' ? 'selected' : '' %>>Contribuinte (tem Inscricao Estadual)</option>
+              <option value="2" <%= fd.indIEDest === '2' ? 'selected' : '' %>>Contribuinte isento de IE</option>
+              <option value="9" <%= !fd.indIEDest || fd.indIEDest === '9' ? 'selected' : '' %>>Nao contribuinte / consumidor final</option>
+            </select>
+          </label>
+          <label id="campo-ie">Inscricao Estadual <input type="text" name="destIE" value="<%= fd.ie || '' %>" inputmode="numeric" /></label>
+          <div class="duas-colunas">
+            <label>CEP * <input type="text" name="destCep" id="destCep" value="<%= fd.cep || '' %>" inputmode="numeric" /></label>
+            <label>Cidade <input type="text" name="destCidade" id="destCidade" value="<%= fd.cidade || '' %>" readonly /></label>
+          </div>
+          <input type="hidden" name="destCMun" id="destCMun" value="<%= fd.cMun || '' %>" />
+          <input type="hidden" name="destUf" id="destUf" value="<%= fd.uf || '' %>" />
+          <label>Logradouro * <input type="text" name="destLogradouro" id="destLogradouro" value="<%= fd.logradouro || '' %>" /></label>
+          <div class="duas-colunas">
+            <label>Numero <input type="text" name="destNumero" id="destNumero" value="<%= fd.numero || '' %>" /></label>
+            <label>Bairro * <input type="text" name="destBairro" id="destBairro" value="<%= fd.bairro || '' %>" /></label>
+          </div>
+          <label>Complemento <input type="text" name="destComplemento" value="<%= fd.complemento || '' %>" /></label>
+          <label>E-mail (opcional) <input type="email" name="destEmail" id="destEmail" value="<%= fd.email || '' %>" /></label>
+          <label class="check"><input type="checkbox" name="consumidorFinal" <%= f.consumidorFinal ? 'checked' : '' %> /> Venda para uso e consumo (consumidor final)</label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Pagamento</h2></div>
+        <label>Forma de pagamento
+          <select name="tPag" id="tPag">
+            <% Object.entries(FORMAS_PAGAMENTO).forEach(([k, n]) => { %>
+              <option value="<%= k %>" <%= (fp.tPag || '01') === k ? 'selected' : '' %> <%= k === '90' ? 'class="so-nfe-opt"' : '' %>><%= n %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label id="campo-recebido">Valor recebido (dinheiro) <input type="text" name="valorRecebido" id="valorRecebido" value="<%= fp.valorRecebido || '' %>" inputmode="decimal" placeholder="para calcular o troco" /></label>
+        <label>Presenca do comprador
+          <select name="presenca">
+            <% Object.entries(PRESENCA).forEach(([k, n]) => { %><option value="<%= k %>" <%= String(f.presenca || '1') === k ? 'selected' : '' %>><%= n %></option><% }) %>
+          </select>
+        </label>
+        <label>Informacoes complementares (opcional) <input type="text" name="infComplementar" value="<%= f.infComplementar || '' %>" maxlength="1000" /></label>
+
+        <div class="resumo-venda">
+          <div><span>Itens</span><strong id="r-itens">0</strong></div>
+          <div><span>Produtos</span><strong id="r-produtos">R$ 0,00</strong></div>
+          <div><span>Descontos</span><strong id="r-desc">R$ 0,00</strong></div>
+          <div class="rv-total"><span>Total</span><strong id="r-total">R$ 0,00</strong></div>
+          <div id="linha-troco" hidden><span>Troco</span><strong id="r-troco">R$ 0,00</strong></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-emitir">Emitir</button>
+      </section>
+    </aside>
+  </div>
+</form>
+<% } %>
+
+<section class="card">
+  <div class="card-head"><h2>Notas emitidas</h2></div>
+  <% if (!historico.length) { %>
+    <p class="muted">Nenhuma emissao ainda.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+    <table class="table">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Numero</th><th>Situacao</th><th>Cliente</th><th class="dir">Valor</th><th></th></tr></thead>
+      <tbody>
+        <% historico.forEach((h) => { %>
+          <tr>
+            <td class="muted small nowrap"><%= new Date(h.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></td>
+            <td><span class="tag tag-<%= h.modelo === '65' ? 'nfce' : 'nfe' %>"><%= h.modelo === '65' ? 'NFC-e' : 'NF-e' %></span></td>
+            <td class="small"><%= h.numero %>/<%= h.serie %></td>
+            <td><span class="tag <%= tagStatus[h.status] %>" title="<%= h.cStat ? h.cStat + ' - ' + (h.xMotivo || '') : '' %>"><%= txtStatus[h.status] %></span><% if (h.ambiente !== 'producao') { %> <span class="tag tag-warn">teste</span><% } %></td>
+            <td><%= h.destNome || (h.modelo === '65' ? 'consumidor' : '-') %></td>
+            <td class="dir nowrap">R$ <%= brl(h.valor) %></td>
+            <td class="row-actions">
+              <a href="<%= base %>/vendas/<%= h._id %>" class="link">abrir</a>
+              <% if (h.status === 'autorizada' || h.status === 'cancelada') { %><a href="<%= base %>/vendas/<%= h._id %>/pdf" target="_blank" class="link"><%= h.modelo === '65' ? 'cupom' : 'DANFE' %></a><% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  <% } %>
+</section>
+
+<% if (empresaSel) { %>
+<script>
+(function () {
+  var PRODUTOS = <%- json(produtos.map((p) => ({ id: String(p._id), codigo: p.codigo, descricao: p.descricao, preco: p.preco, unidade: p.unidade, gtin: p.gtin || '' }))) %>;
+  var INICIAIS = <%- json(((f.itens) || []).map((i) => ({ produtoId: String(i.produtoId), quantidade: i.quantidade, valorUnitario: i.valorUnitario, desconto: i.desconto }))) %>;
+  var porId = {};
+  PRODUTOS.forEach(function (p) { porId[p.id] = p; });
+  var tbody = document.getElementById('itens');
+  var modeloInput = document.getElementById('modelo');
+  var seq = 0;
+
+  function num(v) {
+    if (v === undefined || v === null) return 0;
+    var s = String(v).trim();
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    var n = Number(s);
+    return isFinite(n) ? n : 0;
+  }
+  function brl(n) { return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function adicionar(id, dados) {
+    var p = porId[id];
+    if (!p) return;
+    if (!dados) {
+      var existente = tbody.querySelector('tr[data-produto="' + id + '"]');
+      if (existente) {
+        var q = existente.querySelector('.q');
+        q.value = String(num(q.value) + 1).replace('.', ',');
+        recalcular();
+        return;
+      }
+    }
+    var i = seq++;
+    var d = dados || {};
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-produto', id);
+    tr.innerHTML =
+      '<td><input type="hidden" name="itens[' + i + '][produtoId]" value="' + id + '"><strong>' + esc(p.descricao) + '</strong><div class="muted small">' + esc(p.codigo) + ' · ' + esc(p.unidade) + '</div></td>' +
+      '<td class="dir"><input class="q num" name="itens[' + i + '][quantidade]" value="' + esc(d.quantidade || '1') + '" inputmode="decimal"></td>' +
+      '<td class="dir"><input class="u num" name="itens[' + i + '][valorUnitario]" value="' + esc(d.valorUnitario || String(p.preco.toFixed(2)).replace('.', ',')) + '" inputmode="decimal"></td>' +
+      '<td class="dir"><input class="d num" name="itens[' + i + '][desconto]" value="' + esc(d.desconto || '') + '" inputmode="decimal" placeholder="0,00"></td>' +
+      '<td class="dir nowrap t"></td>' +
+      '<td><button type="button" class="btn btn-sm btn-ghost rm" title="Remover">x</button></td>';
+    tbody.appendChild(tr);
+    recalcular();
+  }
+
+  function recalcular() {
+    var prod = 0, desc = 0, linhas = tbody.querySelectorAll('tr');
+    linhas.forEach(function (tr) {
+      var v = Math.round(num(tr.querySelector('.q').value) * num(tr.querySelector('.u').value) * 100) / 100;
+      var d = num(tr.querySelector('.d').value);
+      tr.querySelector('.t').textContent = brl(v - d);
+      prod += v; desc += d;
+    });
+    var total = prod - desc;
+    document.getElementById('r-itens').textContent = linhas.length;
+    document.getElementById('r-produtos').textContent = brl(prod);
+    document.getElementById('r-desc').textContent = brl(desc);
+    document.getElementById('r-total').textContent = brl(total);
+    document.getElementById('sem-itens').hidden = linhas.length > 0;
+    var dinheiro = document.getElementById('tPag').value === '01';
+    var rec = num(document.getElementById('valorRecebido').value);
+    document.getElementById('campo-recebido').hidden = !dinheiro;
+    document.getElementById('linha-troco').hidden = !(dinheiro && rec > total);
+    document.getElementById('r-troco').textContent = brl(Math.max(0, rec - total));
+  }
+
+  tbody.addEventListener('input', recalcular);
+  tbody.addEventListener('click', function (e) {
+    if (e.target.classList.contains('rm')) { e.target.closest('tr').remove(); recalcular(); }
+  });
+  document.getElementById('tPag').addEventListener('change', recalcular);
+  document.getElementById('valorRecebido').addEventListener('input', recalcular);
+  document.querySelectorAll('[data-add]').forEach(function (b) {
+    b.addEventListener('click', function () { adicionar(b.getAttribute('data-add')); });
+  });
+
+  // Busca (nome, codigo ou codigo de barras). Enter com codigo de barras exato adiciona direto.
+  var busca = document.getElementById('busca');
+  var sug = document.getElementById('sugestoes');
+  function normal(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function filtrar() {
+    var q = normal(busca.value).trim();
+    if (!q) { sug.hidden = true; return []; }
+    var achados = PRODUTOS.filter(function (p) { return normal(p.descricao).indexOf(q) >= 0 || normal(p.codigo) === q || p.gtin === q; }).slice(0, 8);
+    sug.innerHTML = achados.map(function (p) { return '<button type="button" data-id="' + p.id + '">' + esc(p.descricao) + ' <span class="muted">' + esc(p.codigo) + ' · ' + brl(p.preco) + '</span></button>'; }).join('') || '<span class="muted small">Nenhum produto encontrado.</span>';
+    sug.hidden = false;
+    return achados;
+  }
+  if (busca) {
+    busca.addEventListener('input', filtrar);
+    busca.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var a = filtrar();
+      var exato = PRODUTOS.filter(function (p) { return p.gtin === busca.value.trim() || p.codigo === busca.value.trim(); })[0];
+      var escolhido = exato || (a.length === 1 ? a[0] : null);
+      if (escolhido) { adicionar(escolhido.id); busca.value = ''; sug.hidden = true; }
+    });
+    sug.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-id]');
+      if (b) { adicionar(b.getAttribute('data-id')); busca.value = ''; sug.hidden = true; busca.focus(); }
+    });
+  }
+
+  // NFC-e x NF-e
+  function aplicarModelo(m) {
+    modeloInput.value = m;
+    document.querySelectorAll('.sm-op').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-modelo') === m); });
+    document.querySelectorAll('.so-nfce').forEach(function (el) { el.hidden = m !== '65'; el.querySelectorAll('input,select').forEach(function (i) { i.disabled = m !== '65'; }); });
+    document.querySelectorAll('.so-nfe').forEach(function (el) { el.hidden = m !== '55'; el.querySelectorAll('input,select').forEach(function (i) { i.disabled = m !== '55'; }); });
+    document.querySelectorAll('.so-nfe-opt').forEach(function (o) { o.disabled = m !== '55'; });
+    document.getElementById('titulo-cliente').textContent = m === '65' ? 'Consumidor' : 'Cliente (destinatario)';
+    document.getElementById('btn-emitir').textContent = m === '65' ? 'Emitir NFC-e<%= teste %>' : 'Emitir NF-e<%= teste %>';
+    ie();
+  }
+  document.querySelectorAll('.sm-op').forEach(function (b) { b.addEventListener('click', function () { aplicarModelo(b.getAttribute('data-modelo')); }); });
+
+  var indIE = document.getElementById('destIndIEDest');
+  function ie() { document.getElementById('campo-ie').hidden = indIE.value !== '1' || modeloInput.value !== '55'; }
+  indIE.addEventListener('change', ie);
+
+  // CEP -> endereco + codigo IBGE (ViaCEP)
+  function preencherCep(cep) {
+    var n = String(cep || '').replace(/\D/g, '');
+    if (n.length !== 8) return;
+    fetch('https://viacep.com.br/ws/' + n + '/json/').then(function (r) { return r.json(); }).then(function (d) {
+      if (d.erro) return;
+      document.getElementById('destCMun').value = d.ibge || '';
+      document.getElementById('destUf').value = d.uf || '';
+      document.getElementById('destCidade').value = (d.localidade || '') + (d.uf ? ' - ' + d.uf : '');
+      var lg = document.getElementById('destLogradouro'); if (!lg.value) lg.value = d.logradouro || '';
+      var br = document.getElementById('destBairro'); if (!br.value) br.value = d.bairro || '';
+    }).catch(function () {});
+  }
+  document.getElementById('destCep').addEventListener('blur', function () { preencherCep(this.value); });
+
+  // CNPJ -> dados publicos da empresa (BrasilAPI). So preenche o que estiver vazio.
+  document.getElementById('destDocumento55').addEventListener('blur', function () {
+    var n = this.value.replace(/\D/g, '');
+    var msg = document.getElementById('busca-cnpj-msg');
+    if (n.length !== 14) { msg.textContent = ''; if (n.length === 11) indIE.value = '9'; ie(); return; }
+    msg.textContent = 'Buscando dados do CNPJ...';
+    fetch('https://brasilapi.com.br/api/cnpj/v1/' + n).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (d) {
+      function set(id, v) { var el = document.getElementById(id); if (el && !el.value && v) el.value = v; }
+      set('destNome', (d.razao_social || '').slice(0, 60));
+      set('destLogradouro', [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(' '));
+      set('destNumero', d.numero);
+      set('destBairro', d.bairro);
+      set('destEmail', d.email);
+      if (d.cep) { var c = document.getElementById('destCep'); if (!c.value) c.value = String(d.cep); preencherCep(d.cep); }
+      msg.textContent = 'Dados preenchidos pela Receita Federal. Confira a Inscricao Estadual.';
+    }).catch(function () { msg.textContent = 'Nao foi possivel buscar o CNPJ automaticamente; preencha os dados.'; });
+  });
+
+  window.enviarVenda = function (form) {
+    if (!tbody.querySelector('tr')) { alert('Inclua ao menos um produto.'); return false; }
+    var b = document.getElementById('btn-emitir');
+    b.disabled = true;
+    b.textContent = 'Enviando para a SEFAZ...';
+    return true;
+  };
+
+  INICIAIS.forEach(function (i) { adicionar(i.produtoId, i); });
+  aplicarModelo(modeloInput.value);
+  recalcular();
+})();
+</script>
+<% } %>

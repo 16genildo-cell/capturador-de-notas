@@ -1,0 +1,183 @@
+<% const passo1 = certificados.length > 0;
+   const passo2 = empresas.some((e) => e.certificado);
+   const passo3 = config.ambiente === 'producao'; %>
+
+<section class="card">
+  <div class="card-head"><h2>Antes de capturar</h2></div>
+  <ol class="steps">
+    <li class="<%= passo1 ? 'done' : '' %>">
+      <span class="step-mark"><%= passo1 ? '✓' : '1' %></span>
+      <div>
+        <strong>Enviar o certificado digital A1</strong>
+        <div class="muted small">Arquivo .pfx/.p12 (e-CNPJ da empresa ou e-CPF da pessoa fisica) e a senha.</div>
+      </div>
+      <% if (!passo1) { %><a href="/certificados/novo" class="btn btn-sm btn-primary">Enviar certificado</a><% } %>
+    </li>
+    <li class="<%= passo2 ? 'done' : '' %>">
+      <span class="step-mark"><%= passo2 ? '✓' : '2' %></span>
+      <div>
+        <strong>Cadastrar o cliente (empresa ou pessoa fisica) e vincular o certificado</strong>
+        <div class="muted small">CNPJ ou CPF, UF e o certificado que sera usado na consulta.</div>
+      </div>
+      <% if (!passo2) { %>
+        <% if (certificadosSemEmpresa.length > 0) { %>
+          <a href="/empresas/nova?certificado=<%= certificadosSemEmpresa[0]._id %>" class="btn btn-sm btn-primary">Cadastrar cliente do certificado</a>
+        <% } else { %>
+          <a href="/empresas/nova" class="btn btn-sm btn-primary">Cadastrar cliente</a>
+        <% } %>
+      <% } %>
+    </li>
+    <li class="<%= passo3 ? 'done' : 'alert' %>">
+      <span class="step-mark"><%= passo3 ? '✓' : '!' %></span>
+      <div>
+        <strong>Ambiente da SEFAZ: <%= passo3 ? 'producao' : 'homologacao (testes)' %></strong>
+        <div class="muted small">
+          <% if (passo3) { %>
+            Consultando as notas reais da empresa.
+          <% } else { %>
+            Em homologacao nao existem notas reais. Para capturar as notas da empresa, coloque
+            <code>SEFAZ_AMBIENTE=producao</code> no arquivo .env e reinicie o sistema.
+          <% } %>
+        </div>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Clientes</h2>
+    <% if (empresas.length > 0) { %>
+      <form method="post" action="/captura/todas" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Capturando...'">
+        <button class="btn btn-primary">Capturar todas agora</button>
+      </form>
+    <% } %>
+  </div>
+  <% if (empresas.length === 0) { %>
+    <p class="muted">Nenhum cliente cadastrado ainda.</p>
+  <% } else { %>
+    <table class="table">
+      <thead><tr><th>Cliente</th><th>Certificado</th><th>NF-e (produtos)</th><th>NFS-e (servicos)</th><th>CT-e (transporte)</th><th></th></tr></thead>
+      <tbody>
+        <% empresas.forEach((e) => { %>
+          <tr>
+            <td><a href="/empresas/<%= e._id %>" class="link" title="Abrir a pagina da empresa"><strong><%= e.razaoSocial %></strong></a><br><span class="muted small"><%= e.cnpjFormatado %> · <%= e.uf %></span><% if (e.tipoPessoa === 'PF') { %> <span class="tag tag-nfse">pessoa fisica</span><% } %></td>
+            <td>
+              <% if (!e.certificado) { %>
+                <span class="tag tag-err">sem certificado</span>
+              <% } else if (e.certVencido) { %>
+                <span class="tag tag-err">vencido</span>
+              <% } else { %>
+                <span class="tag tag-ok">ok</span>
+                <br><span class="muted small">ate <%= new Date(e.certificado.validoAte).toLocaleDateString('pt-BR') %></span>
+              <% } %>
+            </td>
+            <td>
+              <% if (e.ultimoLog) { %>
+                <span class="tag tag-<%= e.ultimoLog.status === 'sucesso' ? 'ok' : (e.ultimoLog.status === 'erro' ? 'err' : 'warn') %>"><%= e.ultimoLog.status %></span>
+                <span class="muted small"><%= new Date(e.ultimoLog.createdAt).toLocaleString('pt-BR') %></span>
+                <div class="small"><%= e.ultimoLog.novos %> novo(s) · <%= e.ultimoLog.mensagem || '' %></div>
+              <% } else { %>
+                <span class="muted">nunca capturada</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (e.ultimoLogNfse) { %>
+                <span class="tag tag-<%= e.ultimoLogNfse.status === 'sucesso' ? 'ok' : (e.ultimoLogNfse.status === 'erro' ? 'err' : 'warn') %>"><%= e.ultimoLogNfse.status %></span>
+                <span class="muted small"><%= new Date(e.ultimoLogNfse.createdAt).toLocaleString('pt-BR') %></span>
+                <div class="small"><%= e.ultimoLogNfse.mensagem || '' %></div>
+              <% } else { %>
+                <span class="muted">nunca capturada</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (e.ultimoLogCte) { %>
+                <span class="tag tag-<%= e.ultimoLogCte.status === 'sucesso' ? 'ok' : (e.ultimoLogCte.status === 'erro' ? 'err' : 'warn') %>"><%= e.ultimoLogCte.status %></span>
+                <span class="muted small"><%= new Date(e.ultimoLogCte.createdAt).toLocaleString('pt-BR') %></span>
+                <div class="small"><%= e.ultimoLogCte.mensagem || '' %></div>
+              <% } else { %>
+                <span class="muted">nunca capturada</span>
+              <% } %>
+            </td>
+            <td class="row-actions">
+              <% if (e.certificado) { %>
+                <form method="post" action="/notas/capturar/<%= e._id %>" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Capturando...'">
+                  <button class="btn btn-sm btn-primary">Capturar agora</button>
+                </form>
+              <% } else { %>
+                <a href="/empresas/<%= e._id %>/editar" class="btn btn-sm">Vincular certificado</a>
+              <% } %>
+              <a href="/notas?empresa=<%= e._id %>" class="btn btn-sm btn-ghost">Ver notas</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<section class="card" id="notas-capturadas">
+  <div class="card-head">
+    <h2>Notas capturadas recentemente</h2>
+    <a href="/notas" class="link">ver todas e pesquisar</a>
+  </div>
+  <% if (notasRecentes.length === 0) { %>
+    <p class="muted">Nenhuma nota capturada ainda.</p>
+  <% } else { %>
+    <table class="table">
+      <thead><tr><th>Tipo</th><th>Numero</th><th>Prestador / Emitente</th><th>Tomador / Destinatario</th><th>Valor</th><th>Emissao</th><th></th></tr></thead>
+      <tbody>
+        <% notasRecentes.forEach((n) => { %>
+          <tr>
+            <td>
+              <span class="tag tag-<%= n.tipo %>"><%= n.tipo.toUpperCase() %></span>
+              <% if (n.resumo) { %><span class="tag tag-warn">resumo</span><% } %>
+              <% if (n.cancelada) { %><span class="tag tag-err">cancelada</span><% } %>
+            </td>
+            <td><%= n.numero || '-' %></td>
+            <td><%= n.emitenteNome || n.emitenteCnpjCpf || '-' %></td>
+            <td><%= n.destinatarioNome || n.destinatarioCnpjCpf || '-' %></td>
+            <td>R$ <%= (n.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) %></td>
+            <td class="muted"><%= n.dataEmissao ? new Date(n.dataEmissao).toLocaleDateString('pt-BR') : '-' %></td>
+            <td class="row-actions"><a href="/notas/<%= n._id %>/pdf" target="_blank" class="link">PDF</a> <a href="/notas/<%= n._id %>/xml" class="link">XML</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Configuracao</h2></div>
+    <ul class="kv">
+      <li><span class="muted">Captura automatica</span><span><%= config.agendador ? 'ligada (' + config.cron + ')' : 'desligada' %></span></li>
+      <li><span class="muted">Ciencia automatica</span><span><%= config.cienciaAutomatica ? 'ligada' : 'desligada' %></span></li>
+      <li><span class="muted">Notas so com resumo</span>
+        <span><%= resumosPendentes %><% if (resumosPendentes > 0) { %> · <a href="/notas?resumo=1" class="link">ver</a><% } %></span></li>
+    </ul>
+    <p class="muted small">
+      A SEFAZ entrega as notas de entrada primeiro como <strong>resumo</strong>. O XML completo e liberado depois da
+      <strong>Ciencia da Operacao</strong>: use o botao "Baixar XML completo" na lista de notas, ou ligue
+      a <a class="link" href="/assinatura#dados">ciencia automatica em Meu escritorio</a> para fazer isso em toda captura.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Historico</h2></div>
+    <% if (logs.length === 0) { %>
+      <p class="muted">Nenhuma captura executada ainda.</p>
+    <% } else { %>
+      <ul class="log-list">
+        <% logs.forEach((l) => { %>
+          <li>
+            <span class="tag tag-<%= l.status === 'sucesso' ? 'ok' : (l.status === 'erro' ? 'err' : 'warn') %>"><%= l.status %></span>
+            <strong><%= l.tipo.toUpperCase() %></strong>
+            <span class="muted"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= new Date(l.createdAt).toLocaleString('pt-BR') %></span>
+            <span class="log-msg"><%= l.novos %> novo(s) · <%= l.mensagem || '' %></span>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</div>
