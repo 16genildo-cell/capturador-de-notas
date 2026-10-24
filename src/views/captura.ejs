@@ -2,6 +2,81 @@
    const passo2 = empresas.some((e) => e.certificado);
    const passo3 = config.ambiente === 'producao'; %>
 
+<%
+  const statusLog = (l) => (l.status === 'sucesso' ? 'ok' : l.status === 'erro' ? 'err' : 'warn');
+  const sel = locals.clienteSel;
+%>
+<section class="card escolha-cliente">
+  <form method="get" action="/captura" class="ec-form" id="form-cliente">
+    <div class="ec-campo">
+      <label for="cliente">Cliente</label>
+      <select name="cliente" id="cliente" data-seletor-cliente data-enviar>
+        <option value="">Todos os clientes (<%= totalClientes %>)</option>
+        <% opcoesClientes.forEach((o) => { %>
+          <option value="<%= o._id %>" data-doc="<%= o.doc %>" <%= sel && String(sel._id) === String(o._id) ? 'selected' : '' %>><%= o.razaoSocial %></option>
+        <% }) %>
+      </select>
+      <noscript><button class="btn btn-sm">Abrir</button></noscript>
+    </div>
+    <div class="ec-acoes">
+      <% if (sel) { %>
+        <a href="/captura" class="btn btn-ghost">Ver todos</a>
+      <% } else if (empresas.length > 0) { %>
+        <span class="muted small">Escolha um cliente para capturar só as notas dele, ou capture todos de uma vez.</span>
+      <% } %>
+    </div>
+  </form>
+</section>
+
+<% if (sel) { %>
+  <section class="card cliente-captura">
+    <div class="cc-topo">
+      <span class="et-avatar"><%= (sel.razaoSocial || '?').charAt(0).toUpperCase() %></span>
+      <div class="cc-ident">
+        <strong class="cc-nome"><%= sel.razaoSocial %></strong>
+        <span class="muted small mono"><%= sel.cnpjFormatado %> · <%= sel.uf %></span>
+        <span class="cc-tags">
+          <% if (sel.tipoPessoa === 'PF') { %><span class="tag tag-nfse">pessoa física</span><% } %>
+          <% if (!sel.certificado) { %>
+            <span class="tag tag-err">sem certificado</span>
+          <% } else if (sel.certVencido) { %>
+            <span class="tag tag-err">certificado vencido</span>
+          <% } else { %>
+            <span class="tag tag-ok">certificado válido até <%= new Date(sel.certificado.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></span>
+          <% } %>
+        </span>
+      </div>
+      <div class="cc-acoes">
+        <% if (sel.certificado && !sel.certVencido) { %>
+          <form method="post" action="/notas/capturar/<%= sel._id %>" class="inline" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Capturando...'">
+            <button class="btn btn-primary">Capturar agora</button>
+          </form>
+        <% } else if (locals.ehAdmin) { %>
+          <a href="/empresas/<%= sel._id %>/editar" class="btn btn-primary"><%= sel.certificado ? 'Trocar certificado' : 'Vincular certificado' %></a>
+        <% } %>
+        <a href="/notas?empresa=<%= sel._id %>" class="btn">Ver notas</a>
+        <a href="/empresas/<%= sel._id %>" class="btn btn-ghost">Página do cliente</a>
+      </div>
+    </div>
+    <div class="status-captura">
+      <% [['NF-e / NFC-e', 'produtos', sel.ultimoLog, 'nfe'], ['NFS-e', 'serviços', sel.ultimoLogNfse, 'nfse'], ['CT-e', 'transporte', sel.ultimoLogCte, 'cte']].forEach(([rot, sub, l, t]) => { const ligado = !sel.captura || sel.captura[t] !== false; %>
+        <div class="sc-item">
+          <strong><%= rot %> <span class="muted small">(<%= sub %>)</span></strong>
+          <% if (!ligado) { %>
+            <span class="muted small">Captura desligada para este cliente.</span>
+          <% } else if (l) { %>
+            <span><span class="tag tag-<%= statusLog(l) %>"><%= l.status %></span> <span class="muted small"><%= new Date(l.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></span></span>
+            <span class="small"><%= l.novos %> novo(s) · <%= l.mensagem || '' %></span>
+          <% } else { %>
+            <span class="muted small">Ainda não capturado.</span>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+<% } %>
+
+<% if (!sel) { %>
 <section class="card">
   <div class="card-head"><h2>Antes de capturar</h2></div>
   <ol class="steps">
@@ -116,10 +191,12 @@
   <% } %>
 </section>
 
+<% } %>
+
 <section class="card" id="notas-capturadas">
   <div class="card-head">
-    <h2>Notas capturadas recentemente</h2>
-    <a href="/notas" class="link">ver todas e pesquisar</a>
+    <h2>Notas capturadas recentemente<%= sel ? ' · ' + sel.razaoSocial : '' %></h2>
+    <a href="/notas<%= sel ? '?empresa=' + sel._id : '' %>" class="link">ver todas e pesquisar</a>
   </div>
   <% if (notasRecentes.length === 0) { %>
     <p class="muted">Nenhuma nota capturada ainda.</p>
@@ -154,7 +231,7 @@
       <li><span class="muted">Captura automatica</span><span><%= config.agendador ? 'ligada (' + config.cron + ')' : 'desligada' %></span></li>
       <li><span class="muted">Ciencia automatica</span><span><%= config.cienciaAutomatica ? 'ligada' : 'desligada' %></span></li>
       <li><span class="muted">Notas so com resumo</span>
-        <span><%= resumosPendentes %><% if (resumosPendentes > 0) { %> · <a href="/notas?resumo=1" class="link">ver</a><% } %></span></li>
+        <span><%= resumosPendentes %><% if (resumosPendentes > 0) { %> · <a href="/notas?situacao=resumo<%= sel ? '&empresa=' + sel._id : '' %>" class="link">ver</a><% } %></span></li>
     </ul>
     <p class="muted small">
       A SEFAZ entrega as notas de entrada primeiro como <strong>resumo</strong>. O XML completo e liberado depois da
@@ -173,7 +250,7 @@
           <li>
             <span class="tag tag-<%= l.status === 'sucesso' ? 'ok' : (l.status === 'erro' ? 'err' : 'warn') %>"><%= l.status %></span>
             <strong><%= l.tipo.toUpperCase() %></strong>
-            <span class="muted"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= new Date(l.createdAt).toLocaleString('pt-BR') %></span>
+            <span class="muted"><% if (!sel) { %><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <% } %><%= new Date(l.createdAt).toLocaleString('pt-BR') %></span>
             <span class="log-msg"><%= l.novos %> novo(s) · <%= l.mensagem || '' %></span>
           </li>
         <% }) %>
@@ -181,3 +258,5 @@
     <% } %>
   </section>
 </div>
+
+<script src="/static/js/seletor-cliente.js"></script>

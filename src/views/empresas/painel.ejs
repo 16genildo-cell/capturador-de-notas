@@ -5,7 +5,6 @@
   const maxV = Math.max(1, ...meses.map((m) => Math.max(m.entradas.valor, m.saidas.valor)));
   const pt = stats.porTipo;
   const qtd = (t) => (pt[t] ? pt[t].qtd : 0);
-  const cfg = empresa.emissaoNfse || {};
   const dataHora = (d) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' });
   const tagLog = (s) => (s === 'sucesso' ? 'ok' : s === 'erro' ? 'err' : 'warn');
   const mesHoje = hoje.slice(0, 7);
@@ -102,7 +101,7 @@
   <section class="card">
     <div class="card-head"><h2>Captura</h2><a href="<%= base %>/captura" class="link">historico</a></div>
     <% if (!empresa.certificado) { %>
-      <p class="small"><span class="tag tag-warn">sem certificado</span> Sem o certificado A1 nao da para capturar nem emitir.
+      <p class="small"><span class="tag tag-warn">sem certificado</span> Sem o certificado A1 nao da para capturar.
         <% if (locals.ehAdmin) { %><a href="<%= base %>/editar" class="link">Vincular certificado</a><% } %></p>
     <% } %>
     <div class="status-captura">
@@ -120,27 +119,6 @@
     </div>
   </section>
 </div>
-
-<section class="card">
-  <div class="card-head">
-    <h2>Emitir NFS-e</h2>
-    <% if (cfg.ativa) { %>
-      <span class="links-head">
-        <a href="<%= base %>/emitir#formulario" class="link">nota avulsa</a>
-        <a href="<%= base %>/emitir/servicos" class="link"><%= locals.ehAdmin ? 'cadastrar / editar servicos' : 'ver servicos' %></a>
-      </span>
-    <% } %>
-  </div>
-  <% if (!cfg.ativa) { %>
-    <p class="muted small">A emissao de NFS-e pelo Emissor Nacional ainda nao esta ativada para esta empresa.
-      <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/configurar/<%= empresa._id %>" class="link">Configurar emissao</a><% } else { %>Peca a um administrador para configurar.<% } %></p>
-  <% } else if (!servicos.length) { %>
-    <p class="muted small">Cadastre os servicos que esta empresa presta e emita cada nota com um clique.
-      <% if (locals.ehAdmin) { %><a href="<%= base %>/emitir/servicos/novo?empresa=<%= empresa._id %>" class="link">Cadastrar o primeiro servico</a><% } %></p>
-  <% } else { %>
-    <%- include('../emitir/_servicos-cards', { servicos, cfg, hoje }) %>
-  <% } %>
-</section>
 
 <div class="grid-2">
   <section class="card">
@@ -169,8 +147,6 @@
   <section class="card">
     <div class="card-head"><h2>Atalhos</h2></div>
     <div class="atalhos">
-      <a href="<%= base %>/vendas?modelo=65" class="btn btn-sm btn-primary">Emitir NFC-e</a>
-      <a href="<%= base %>/vendas?modelo=55" class="btn btn-sm btn-primary">Emitir NF-e</a>
       <a href="<%= base %>/notas/exportar?mes=<%= mesHoje %>&formato=ambos" class="btn btn-sm">XML + PDF do mes (ZIP)</a>
       <a href="<%= base %>/relatorios/excel?ano=<%= hoje.slice(0, 4) %>" class="btn btn-sm">Excel do ano</a>
       <a href="<%= base %>/notas?papel=tomadas" class="btn btn-sm">Notas tomadas</a>
@@ -180,18 +156,5 @@
         <a href="<%= base %>/editar" class="btn btn-sm btn-ghost">Dados do cliente</a>
       <% } %>
     </div>
-    <% if (emissoes.length) { %>
-      <h3 class="sub">Ultimas emissoes</h3>
-      <ul class="log-list">
-        <% emissoes.forEach((h) => { %>
-          <li>
-            <span class="tag <%= { autorizada: 'tag-ok', rejeitada: 'tag-err', sem_resposta: 'tag-warn', cancelada: 'tag-err' }[h.status] %>"><%= h.status.replace('_', ' ') %></span>
-            <% if (h.ambiente !== 'producao') { %><span class="tag tag-warn">teste</span><% } %>
-            <a href="<%= base %>/emitir/<%= h._id %>" class="link"><%= h.tomadorNome || 'sem tomador' %></a>
-            <span class="log-msg">R$ <%= brl(h.valor) %> · <%= dataHora(h.createdAt) %></span>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
   </section>
 </div>

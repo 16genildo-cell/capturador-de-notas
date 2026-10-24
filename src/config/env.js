@@ -16,8 +16,6 @@ export const env = {
   sessionSecret: required('SESSION_SECRET', 'dev-secret-inseguro-troque'),
   certEncryptionKey: process.env.CERT_ENCRYPTION_KEY || '',
   sefazAmbiente: (process.env.SEFAZ_AMBIENTE || 'homologacao').toLowerCase(),
-  schedulerEnabled: String(process.env.SCHEDULER_ENABLED || 'true') === 'true',
-  schedulerCron: process.env.SCHEDULER_CRON || '0 * * * *',
   isProd: process.env.NODE_ENV === 'production',
   // Arquivo .pem com a cadeia de certificados ICP-Brasil (opcional).
   sefazCaFile: (process.env.SEFAZ_CA_FILE || '').trim(),
@@ -42,7 +40,6 @@ export const env = {
     para: (process.env.ALERTA_EMAIL_PARA || '').split(/[,;]/).map((s) => s.trim()).filter(Boolean),
   },
   // Padrao para contas novas (cada conta pode mudar em "Minha conta").
-  cienciaAutomatica: String(process.env.SEFAZ_CIENCIA_AUTOMATICA || 'false') === 'true',
   // Endereco publico do sistema (links nos e-mails, retorno do pagamento).
   appUrl: (process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, ''),
   // Endereco do frontend web (React). Links de e-mail (nova senha) apontam para ele.

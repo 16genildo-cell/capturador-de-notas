@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
   });
 });
 
-// Dados da conta (nome, documento de cobranca, alertas, ciencia automatica)
+// Dados da conta (nome, documento de cobranca, alertas)
 router.post('/dados', requireAdmin, async (req, res) => {
   try {
     const conta = req.contaSaas;
@@ -73,7 +73,6 @@ router.post('/dados', requireAdmin, async (req, res) => {
         .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))
         .slice(0, 10),
     );
-    conta.set('config.cienciaAutomatica', req.body.cienciaAutomatica === 'on');
     await conta.save();
     req.session.flash = { type: 'ok', msg: 'Dados da conta salvos.' };
   } catch (err) {

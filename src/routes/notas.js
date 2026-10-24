@@ -3,6 +3,8 @@ import { escopo, escopoDaEmpresa, restricaoEmpresas } from '../middleware/escopo
 import archiver from 'archiver';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { Empresa } from '../models/Empresa.js';
+import { Certificado } from '../models/Certificado.js';
+import { ehCliente } from '../middleware/perfilCliente.js';
 import { NotaFiscal } from '../models/NotaFiscal.js';
 import { capturarEmpresa } from '../services/capturaService.js';
 import { obterCertificadoEmpresa } from '../services/sefaz/distribuicaoDFe.js';
@@ -23,10 +25,83 @@ const LIMITE_EXPORTACAO_XML = 5000;
 const LIMITE_EXPORTACAO_PDF = 1000;
 const LIMITE_CIENCIA_LOTE = 30;
 
+/** Resume o resultado de capturarEmpresa() numa frase para o aviso da tela. */
+function textoCaptura(empresa, r) {
+  if (r.aviso) return `${empresa.razaoSocial}: ${r.aviso}`;
+  const partes = [r.nfe && `NF-e: ${r.nfe.mensagem}`, r.nfse && `NFS-e: ${r.nfse.mensagem}`, r.cte && `CT-e: ${r.cte.mensagem}`].filter(Boolean);
+  return `${empresa.razaoSocial}: ${partes.join(' | ') || 'nada a capturar'}`;
+}
+
+/**
+ * Busca na SEFAZ / Ambiente Nacional as notas dos clientes que usam o certificado
+ * escolhido na tela de notas (botao Filtrar). Devolve o aviso para a tela.
+ */
+async function buscarNotasDoCertificado(cert, empresas) {
+  if (!empresas.length) {
+    return {
+      type: 'erro',
+      msg: `O certificado ${cert.apelido} ainda não está vinculado a nenhum cliente. Cadastre o cliente deste certificado para buscar as notas.`,
+      link: { href: `/empresas/nova?certificado=${cert._id}`, texto: 'Cadastrar cliente' },
+    };
+  }
+  if (cert.validoAte && new Date(cert.validoAte).getTime() < Date.now()) {
+    return { type: 'erro', msg: `O certificado ${cert.apelido} venceu em ${new Date(cert.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}. Envie o certificado renovado para buscar as notas.` };
+  }
+  let novos = 0;
+  let houveErro = false;
+  const linhas = [];
+  for (const e of empresas) {
+    try {
+      const r = await capturarEmpresa(e._id, { origem: 'manual' });
+      novos += (r.nfe?.novos || 0) + (r.nfse?.novos || 0) + (r.cte?.novos || 0);
+      if ([r.nfe, r.nfse, r.cte].some((x) => x?.status === 'erro')) houveErro = true;
+      linhas.push(textoCaptura(e, r));
+    } catch (err) {
+      houveErro = true;
+      linhas.push(`${e.razaoSocial}: erro - ${err.message}`);
+    }
+  }
+  return {
+    type: houveErro ? 'erro' : novos > 0 ? 'ok' : 'info',
+    msg: `Busca concluída: ${novos} documento(s) novo(s). ${linhas.join(' · ')}`,
+  };
+}
+
 // Listagem com filtros + totais do filtro
 router.get('/', async (req, res) => {
   const owner = req.conta;
   const { filtro, filtros } = montarFiltroNotas(req.query, owner, req.empresasPermitidas);
+
+  // Certificado escolhido (so no painel geral do escritorio; dentro da pagina do cliente nao se aplica)
+  const usaCertificado = !req.base && !ehCliente(req.user);
+  filtros.certificado = '';
+  let certSel = null;
+  if (usaCertificado && mongoose.isValidObjectId(String(req.query.certificado || ''))) {
+    certSel = await Certificado.findOne({ _id: req.query.certificado, owner, ativo: true }).select('apelido titular cnpjCpf validoAte').lean();
+  }
+  if (certSel) {
+    filtros.certificado = String(certSel._id);
+    const doCert = await Empresa.find({ owner, certificado: certSel._id, ...restricaoEmpresas(req, '_id') }).select('_id razaoSocial').sort('razaoSocial').lean();
+    // Operador restrito sem nenhum cliente deste certificado: ignora o certificado
+    if (!doCert.length && req.empresasPermitidas) {
+      certSel = null;
+      filtros.certificado = '';
+    } else {
+      // Botao Filtrar com certificado: busca as notas novas antes de listar (e volta sem "buscar" na URL)
+      if (req.query.buscar === '1') {
+        req.session.flash = await buscarNotasDoCertificado(certSel, doCert);
+        return res.redirect(`/notas?${queryString(filtros, { page: '' })}`);
+      }
+      const ids = doCert.map((e) => e._id);
+      // Cliente escolhido junto: so se for deste certificado
+      if (filtro.empresa && !(filtro.empresa instanceof mongoose.Types.ObjectId && ids.some((id) => String(id) === String(filtro.empresa)))) {
+        filtro.empresa = { $in: ids };
+        filtros.empresa = '';
+      } else if (!filtro.empresa) {
+        filtro.empresa = { $in: ids };
+      }
+    }
+  }
 
   const page = Math.max(1, Number(req.query.page) || 1);
   const porPagina = 25;
@@ -65,9 +140,21 @@ router.get('/', async (req, res) => {
     resumoTotais.porTipo[t._id] = t;
   }
 
+  // Certificados para o campo de busca (operador restrito: so os dos clientes dele)
+  let certificados = [];
+  if (usaCertificado) {
+    const permitidos = req.empresasPermitidas
+      ? (await Empresa.find({ owner, ...restricaoEmpresas(req, '_id'), certificado: { $ne: null } }).distinct('certificado'))
+      : null;
+    certificados = await Certificado.find({ owner, ativo: true, ...(permitidos ? { _id: { $in: permitidos } } : {}) })
+      .select('apelido titular cnpjCpf validoAte').sort('apelido').lean();
+  }
+
   res.render('notas/lista', {
     title: 'Notas fiscais',
     notas,
+    certificados: certificados.map((c) => ({ ...c, doc: c.cnpjCpf ? formatarDocumento(c.cnpjCpf) : '', vencido: c.validoAte ? new Date(c.validoAte).getTime() < Date.now() : false })),
+    usaCertificado,
     empresas,
     filtros,
     categorias: CATEGORIAS,
@@ -342,8 +429,7 @@ router.post('/capturar/:empresaId', async (req, res) => {
     req.session.flash = { type: 'erro', msg: `Erro na captura: ${err.message}` };
   }
   const voltar = req.get('referer') || `${req.base}/notas`;
-  // Vindo da pagina Captura, volta direto para a lista de notas capturadas.
-  res.redirect(voltar.includes('/captura') ? '/captura#notas-capturadas' : voltar);
+  res.redirect(voltar);
 });
 
 export default router;

@@ -34,7 +34,7 @@ router.post('/', upload.single('pfx'), async (req, res) => {
     // Valida e extrai metadados (tambem confirma que a senha esta correta).
     const info = lerPfx(req.file.buffer, senha);
 
-    await Certificado.create({
+    const cert = await Certificado.create({
       owner: req.conta,
       apelido: apelido?.trim() || info.titular || 'Certificado A1',
       titular: info.titular,
@@ -50,7 +50,7 @@ router.post('/', upload.single('pfx'), async (req, res) => {
       type: 'ok',
       msg: 'Certificado enviado e validado. Agora cadastre a empresa e vincule este certificado.',
     };
-    res.redirect('/captura');
+    res.redirect(`/empresas/nova?certificado=${cert._id}`);
   } catch (err) {
     req.session.flash = {
       type: 'erro',

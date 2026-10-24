@@ -6,7 +6,7 @@
 <section class="lp-abertura">
   <div>
     <h1>Notas fiscais de todos os clientes do escritório, baixadas sozinhas.</h1>
-    <p class="sub">Cadastre o certificado A1 de cada cliente uma vez. A cada hora, o sistema busca na SEFAZ e no Ambiente Nacional da NFS-e as notas de toda a carteira e guarda o XML e o PDF para a sua equipe.</p>
+    <p class="sub">Cadastre o certificado A1 de cada cliente uma vez. Quando precisar, escolha o certificado e o sistema busca na SEFAZ e no Ambiente Nacional da NFS-e as notas do cliente, guardando o XML e o PDF para a sua equipe.</p>
     <div class="acoes">
       <% if (cadastroAberto) { %><a href="/registrar" class="bt bt-azul">Testar grátis por <%= teste.dias %> dias</a>
       <% } else if (emailSuporte) { %><a href="mailto:<%= emailSuporte %>?subject=<%= assunto %>" class="bt bt-azul">Quero contratar</a>
@@ -46,7 +46,7 @@
     <h2>Do certificado ao XML, sem planilha nem download manual</h2>
     <ol class="lp-passos">
       <li><h3>Cadastre o cliente</h3><p>Envie o certificado A1 (e-CNPJ ou e-CPF) e o sistema já reconhece o cliente e os documentos dele.</p></li>
-      <li><h3>A captura roda sozinha</h3><p>A cada hora consultamos a SEFAZ (NF-e, NFC-e e CT-e) e o Ambiente Nacional (NFS-e) para todos os CNPJs da carteira.</p></li>
+      <li><h3>Busca quando você quiser</h3><p>Escolha o certificado e clique em Filtrar: consultamos a SEFAZ (NF-e, NFC-e e CT-e) e o Ambiente Nacional (NFS-e) na hora.</p></li>
       <li><h3>A equipe trabalha com tudo pronto</h3><p>XML completo, DANFE em PDF, prazos de manifestação e aviso de certificado vencendo, cliente por cliente.</p></li>
     </ol>
   </section>
@@ -55,11 +55,10 @@
 <section class="lp-secao" id="recursos">
   <h2>O que muda na rotina do escritório</h2>
   <dl class="lp-recursos">
-    <div><dt>Manifestação sem correria</dt><dd>A ciência automática libera o XML completo, e o sistema avisa antes do prazo de 180 dias.</dd></div>
+    <div><dt>Manifestação sem correria</dt><dd>Dê a ciência com um clique para liberar o XML completo, e o sistema avisa antes do prazo de 180 dias.</dd></div>
     <div><dt>Download por cliente e período</dt><dd>ZIP com XML, PDF e planilha, pronto para importar no sistema contábil.</dd></div>
     <div><dt>Equipe por carteira</dt><dd>Cada pessoa da equipe vê só os clientes que atende; os administradores veem todos.</dd></div>
     <div><dt>Acesso para o seu cliente</dt><dd>Um login só de consulta para o cliente ver e baixar as notas do próprio CNPJ.</dd></div>
-    <div><dt>Emissão de notas</dt><dd>NFS-e pelo Emissor Nacional e NF-e ou NFC-e na SEFAZ, em nome de cada cliente.</dd></div>
     <div><dt>Relatórios</dt><dd>Entradas e saídas por mês, fornecedor, cliente, CFOP e NCM, com exportação para Excel.</dd></div>
     <div><dt>Certificados protegidos</dt><dd>Certificados e senhas guardados com criptografia; cada escritório vê apenas os próprios clientes.</dd></div>
     <div><dt>Suporte dentro do sistema</dt><dd>Fale com a nossa equipe pelo chat, sem sair do painel.</dd></div>

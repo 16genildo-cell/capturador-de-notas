@@ -435,7 +435,6 @@ r.put('/conta', async (req, res) => {
   if (Array.isArray(req.body.alertasPara)) {
     conta.set('config.alertasPara', req.body.alertasPara.map((s) => String(s).trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)).slice(0, 10));
   }
-  if (typeof req.body.cienciaAutomatica === 'boolean') conta.set('config.cienciaAutomatica', req.body.cienciaAutomatica);
   await conta.save();
   res.json({ conta: contaPublica(conta) });
 });

@@ -9,10 +9,6 @@
     ['Visão geral', b, p === b],
     ['Notas fiscais', b + '/notas', p.startsWith(b + '/notas')],
     ['Captura', b + '/captura', p.startsWith(b + '/captura')],
-    ['Emitir NFS-e', b + '/emitir', p.startsWith(b + '/emitir') && !p.startsWith(b + '/emitir/servicos') && !p.startsWith(b + '/emitir/configurar')],
-    ['Serviços', b + '/emitir/servicos', p.startsWith(b + '/emitir/servicos')],
-    ['Vender (NF-e / NFC-e)', b + '/vendas', p.startsWith(b + '/vendas') && !p.startsWith(b + '/vendas/produtos') && !p.startsWith(b + '/vendas/configurar')],
-    ['Produtos', b + '/vendas/produtos', p.startsWith(b + '/vendas/produtos')],
     ['Relatórios', b + '/relatorios', p.startsWith(b + '/relatorios')],
   ];
   // Cliente do escritorio: so consulta (visao geral, notas e relatorios).
@@ -21,11 +17,11 @@
   }
   // Abas de funcionalidades que o plano do escritorio nao inclui ficam escondidas.
   const temAba = (id) => !locals.recursos || locals.recursos.includes(id);
-  const recursoDaAba = { 'Emitir NFS-e': 'emissao_nfse', 'Serviços': 'emissao_nfse', 'Vender (NF-e / NFC-e)': 'emissao_nfe', 'Produtos': 'emissao_nfe', 'Relatórios': 'relatorios' };
+  const recursoDaAba = { 'Relatórios': 'relatorios' };
   for (let i = abas.length - 1; i >= 0; i -= 1) if (recursoDaAba[abas[i][0]] && !temAba(recursoDaAba[abas[i][0]])) abas.splice(i, 1);
   if (locals.ehAdmin) {
     if (temAba('importar_xml')) abas.push(['Importar XML', b + '/importar', p.startsWith(b + '/importar')]);
-    abas.push(['Configurações', b + '/editar', p.startsWith(b + '/editar') || p.startsWith(b + '/emitir/configurar') || p.startsWith(b + '/vendas/configurar')]);
+    abas.push(['Configurações', b + '/editar', p.startsWith(b + '/editar')]);
   }
 %>
 <section class="empresa-topo">
@@ -64,12 +60,6 @@
       <span class="tag <%= certDias <= 30 ? 'tag-warn' : 'tag-ok' %> tag-status-pill" title="Certificado <%= eA.certificado.apelido %>">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
         A1 válido até <%= certVence ? certVence.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-' %>
-      </span>
-    <% } %>
-
-    <% if (eA.emissaoNfse && eA.emissaoNfse.ativa) { %>
-      <span class="tag <%= eA.emissaoNfse.ambiente === 'producao' ? 'tag-ok' : 'tag-warn' %> tag-status-pill">
-        NFS-e: <%= eA.emissaoNfse.ambiente === 'producao' ? 'Produção' : 'Homologação' %>
       </span>
     <% } %>
 

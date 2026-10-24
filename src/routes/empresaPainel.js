@@ -1,15 +1,13 @@
 import { Router } from 'express';
 import { NotaFiscal } from '../models/NotaFiscal.js';
 import { CapturaLog } from '../models/CapturaLog.js';
-import { EmissaoNfse } from '../models/EmissaoNfse.js';
-import { ServicoNfse } from '../models/ServicoNfse.js';
 import { capturarEmpresa } from '../services/capturaService.js';
 import { resumoMensal } from '../services/relatorios.js';
 import { env } from '../config/env.js';
 
 /**
  * Pagina propria de cada empresa (montada em /empresas/:empresaId, depois do escopoEmpresa):
- * visao geral e captura. Notas, emissao, servicos, relatorios e importacao usam as rotas de
+ * visao geral e captura. Notas, relatorios e importacao usam as rotas de
  * sempre, restritas a empresa pelo escopo.
  */
 const router = Router();
@@ -39,7 +37,7 @@ router.get('/', async (req, res) => {
   inicio12.setMonth(inicio12.getMonth() - 11, 1);
   inicio12.setHours(0, 0, 0, 0);
 
-  const [porTipo, meses, ultimasNotas, capturas, pendManifestacao, resumos, servicos, emissoes] = await Promise.all([
+  const [porTipo, meses, ultimasNotas, capturas, pendManifestacao, resumos] = await Promise.all([
     NotaFiscal.aggregate([
       { $match: { ...filtroBase, tipo: { $ne: 'evento' } } },
       {
@@ -55,10 +53,6 @@ router.get('/', async (req, res) => {
     ultimaCapturaPorTipo(empresa._id),
     NotaFiscal.countDocuments({ ...filtroBase, tipo: 'nfe', papel: 'destinatario', cancelada: { $ne: true }, situacaoManifestacao: { $in: ['pendente', 'ciencia'] } }),
     NotaFiscal.countDocuments({ ...filtroBase, resumo: true, cancelada: { $ne: true } }),
-    empresa.emissaoNfse?.ativa
-      ? ServicoNfse.find({ ...filtroBase, ativo: true }).sort('-ultimaEmissao nome').limit(6).then((l) => l.map((s) => s.toObject()))
-      : [],
-    EmissaoNfse.find(filtroBase).select('status ambiente nDPS serie tomadorNome valor createdAt').sort('-createdAt').limit(5).lean(),
   ]);
 
   const stats = { total: 0, valor: 0, porTipo: {} };
@@ -78,8 +72,6 @@ router.get('/', async (req, res) => {
     ultimasNotas,
     capturas,
     pendencias: { manifestacao: pendManifestacao, resumos },
-    servicos,
-    emissoes,
     hoje: hojeBr(),
     ROT_TIPO,
   });
@@ -98,7 +90,7 @@ router.get('/captura', async (req, res) => {
     logs,
     capturas,
     ROT_TIPO,
-    config: { ambiente: env.sefazAmbiente, agendador: env.schedulerEnabled, cron: env.schedulerCron },
+    config: { ambiente: env.sefazAmbiente },
   });
 });
 

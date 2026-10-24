@@ -39,51 +39,6 @@ async function enviarParaConta(owner, assunto, html, push) {
 }
 
 /**
- * Resumo enviado apos a captura automatica, um e-mail por conta, so com as
- * empresas daquela conta: notas novas, notas canceladas pelo emissor e erros.
- */
-export async function alertaPosCaptura(resultados, inicio) {
-  if (!emailConfigurado() && !pushConfigurado()) return 0;
-  let enviados = 0;
-  for (const [owner, lista] of porConta(resultados.filter((r) => r.owner))) {
-    const novas = [];
-    const erros = [];
-    for (const r of lista) {
-      const n = (r.nfe?.novos || 0) + (r.nfse?.novos || 0) + (r.cte?.novos || 0);
-      if (n) novas.push(`${r.empresa}: ${n} documento(s) novo(s)`);
-      for (const [rotulo, x] of [['NF-e', r.nfe], ['NFS-e', r.nfse], ['CT-e', r.cte]]) {
-        if (x?.status === 'erro') erros.push(`${r.empresa} - ${rotulo}: ${x.mensagem}`);
-      }
-      if (r.erro) erros.push(`${r.empresa}: ${r.erro}`);
-    }
-    const canceladas = await NotaFiscal.find({ owner, cancelada: true, updatedAt: { $gte: inicio }, tipo: { $ne: 'evento' } })
-      .select('tipo numero emitenteNome valorTotal')
-      .limit(50)
-      .lean();
-    const itensCanceladas = canceladas.map((n) => `${n.tipo.toUpperCase()} ${n.numero || ''} - ${n.emitenteNome || ''} (${brl(n.valorTotal)})`);
-    if (!novas.length && !erros.length && !itensCanceladas.length) continue;
-
-    const html = montarHtml('Captura de notas concluída', [
-      { titulo: 'Documentos novos', itens: novas },
-      { titulo: 'Notas canceladas pelo emissor', itens: itensCanceladas },
-      { titulo: 'Erros na captura', itens: erros },
-    ], `${nome()} - ${env.appUrl}`);
-    const partes = [];
-    if (novas.length) partes.push('notas novas');
-    if (itensCanceladas.length) partes.push(`${itensCanceladas.length} cancelada(s)`);
-    if (erros.length) partes.push(`${erros.length} erro(s)`);
-    try {
-      const texto = partes.join(', ');
-      const push = { titulo: novas.length ? 'Notas novas capturadas' : 'Captura de notas', texto: texto.charAt(0).toUpperCase() + texto.slice(1), dados: { tela: 'notas' } };
-      if (await enviarParaConta(owner, `${nome()}: ${texto}`, html, push)) enviados += 1;
-    } catch (err) {
-      console.error(`[email] pos-captura conta ${owner}:`, err.message);
-    }
-  }
-  return enviados;
-}
-
-/**
  * Alerta diario por conta: certificados vencendo (aviso em 30, 15, 7, 3, 1 e 0 dias;
  * vencidos as segundas) e NF-e recebidas cujo prazo de manifestacao termina em ate 15 dias.
  */

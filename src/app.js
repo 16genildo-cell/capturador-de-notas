@@ -15,19 +15,15 @@ import usuarioRoutes from './routes/usuarios.js';
 import saudeRoutes from './routes/saude.js';
 import importarRoutes from './routes/importar.js';
 import relatorioRoutes from './routes/relatorios.js';
-import emitirRoutes from './routes/emitir.js';
-import servicoNfseRoutes from './routes/servicosNfse.js';
 import { alertaCertificados } from './middleware/alertas.js';
 import { escopoEmpresa, semEscopo, menuEmpresas } from './middleware/escopoEmpresa.js';
 import empresaPainelRoutes from './routes/empresaPainel.js';
-import vendasRoutes from './routes/vendas.js';
 
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import empresaRoutes from './routes/empresas.js';
 import certificadoRoutes from './routes/certificados.js';
 import notaRoutes from './routes/notas.js';
-import capturaRoutes from './routes/captura.js';
 import assinaturaRoutes from './routes/assinatura.js';
 import webhookRoutes from './routes/webhooks.js';
 import apiV1 from './api/index.js';
@@ -112,6 +108,7 @@ export function createApp() {
   app.use(semEscopo);
   app.use((req, res, next) => {
     res.locals.currentPath = req.path;
+    res.locals.queryAtual = req.query;
     res.locals.sefazAmbiente = env.sefazAmbiente;
     res.locals.flash = req.session.flash || null;
     delete req.session.flash;
@@ -135,27 +132,18 @@ export function createApp() {
   paginaEmpresa.use('/', empresaPainelRoutes);
   paginaEmpresa.use('/notas', notaRoutes);
   // Funcionalidades que dependem do plano do escritorio
-  const nfse = exigirRecurso('emissao_nfse');
-  const nfe = exigirRecurso('emissao_nfe');
   const relatorios = exigirRecurso('relatorios');
   const importar = exigirRecurso('importar_xml');
-  paginaEmpresa.use('/emitir/servicos', nfse, servicoNfseRoutes);
-  paginaEmpresa.use('/emitir', nfse, emitirRoutes);
-  paginaEmpresa.use('/vendas', nfe, vendasRoutes);
   paginaEmpresa.use('/relatorios', relatorios, relatorioRoutes);
   paginaEmpresa.use('/importar', importar, importarRoutes);
   app.use('/empresas/:empresaId', paginaEmpresa);
   app.use('/empresas', empresaRoutes);
   app.use('/certificados', certificadoRoutes);
   app.use('/notas', notaRoutes);
-  app.use('/captura', capturaRoutes);
   app.use('/usuarios', usuarioRoutes);
   app.use('/saude', saudeRoutes);
   app.use('/importar', importar, importarRoutes);
   app.use('/relatorios', relatorios, relatorioRoutes);
-  app.use('/vendas', nfe, vendasRoutes);
-  app.use('/emitir/servicos', nfse, servicoNfseRoutes);
-  app.use('/emitir', nfse, emitirRoutes);
 
   // 404
   app.use((req, res) => {

@@ -22,16 +22,19 @@ router.get('/', async (req, res) => {
     req.empresasPermitidas ? [] : Certificado.find({ owner, ativo: true }).sort('-createdAt').lean(),
   ]);
 
-  const idsEmpresas = empresas.map((e) => e._id);
+  // Cliente escolhido no topo da pagina: tudo abaixo passa a mostrar so ele.
+  const clienteSel = empresas.find((e) => String(e._id) === String(req.query.cliente || '')) || null;
+  const doCliente = clienteSel ? { empresa: clienteSel._id } : re;
+  const idsEmpresas = clienteSel ? [clienteSel._id] : empresas.map((e) => e._id);
   const [logs, resumosPendentes, notasRecentes] = await Promise.all([
     CapturaLog.find({ empresa: { $in: idsEmpresas } })
       .sort('-createdAt')
       .limit(30)
       .populate('empresa', 'razaoSocial')
       .lean(),
-    NotaFiscal.countDocuments({ owner, ...re, resumo: true, tipo: { $in: ['nfe', 'nfce'] }, cancelada: { $ne: true } }),
+    NotaFiscal.countDocuments({ owner, ...doCliente, resumo: true, tipo: { $in: ['nfe', 'nfce'] }, cancelada: { $ne: true } }),
     // Ultimas notas capturadas (sem eventos), para conferir o resultado aqui mesmo.
-    NotaFiscal.find({ owner, ...re, tipo: { $ne: 'evento' } })
+    NotaFiscal.find({ owner, ...doCliente, tipo: { $ne: 'evento' } })
       .sort('-createdAt')
       .limit(15)
       .select('-xml')
@@ -44,17 +47,21 @@ router.get('/', async (req, res) => {
   const certificadosSemEmpresa = certificados.filter((c) => !usados.has(String(c._id)));
 
   const agora = Date.now();
+  const comStatus = (e) => ({
+    ...e,
+    cnpjFormatado: formatarDocumento(e.cnpj),
+    tipoPessoa: tipoPessoa(e.cnpj),
+    certVencido: e.certificado?.validoAte ? new Date(e.certificado.validoAte).getTime() < agora : false,
+    ultimoLog: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'nfe'),
+    ultimoLogNfse: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'nfse'),
+    ultimoLogCte: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'cte'),
+  });
   res.render('captura', {
     title: 'Captura',
-    empresas: empresas.map((e) => ({
-      ...e,
-      cnpjFormatado: formatarDocumento(e.cnpj),
-      tipoPessoa: tipoPessoa(e.cnpj),
-      certVencido: e.certificado?.validoAte ? new Date(e.certificado.validoAte).getTime() < agora : false,
-      ultimoLog: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'nfe'),
-      ultimoLogNfse: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'nfse'),
-      ultimoLogCte: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'cte'),
-    })),
+    clienteSel: clienteSel ? comStatus(clienteSel) : null,
+    opcoesClientes: empresas.map((e) => ({ _id: e._id, razaoSocial: e.razaoSocial, doc: formatarDocumento(e.cnpj) })),
+    totalClientes: empresas.length,
+    empresas: (clienteSel ? [clienteSel] : empresas).map(comStatus),
     certificados,
     certificadosSemEmpresa,
     logs,

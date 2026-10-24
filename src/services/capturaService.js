@@ -8,7 +8,7 @@ const comoErro = (err) => ({ status: 'erro', novos: 0, mensagem: err.message });
 
 /**
  * Trava por empresa: impede duas capturas simultaneas da mesma empresa
- * (ex.: agendador + botao "Capturar agora"), o que poderia gerar consultas
+ * (ex.: dois cliques em "Capturar agora" / Filtrar), o que poderia gerar consultas
  * duplicadas e o bloqueio "656 - consumo indevido" da SEFAZ.
  */
 const emAndamento = new Map(); // empresaId -> inicio (ms)
@@ -85,7 +85,7 @@ async function capturarEmpresaSemTrava(empresaId, { origem, tipos }) {
 
 /**
  * Ids (string) das contas que podem usar o sistema agora (teste valido, em dia ou cortesia).
- * recurso: exige tambem essa funcionalidade no plano (ex.: 'captura_automatica', 'alertas').
+ * recurso: exige tambem essa funcionalidade no plano (ex.: 'alertas').
  */
 export async function contasLiberadas(ownerIds, { recurso } = {}) {
   const ids = [...new Set(ownerIds.map(String))];
@@ -97,21 +97,4 @@ export async function contasLiberadas(ownerIds, { recurso } = {}) {
     if (!c) return true;
     return c.acesso().liberado && (!recurso || c.temRecurso(recurso));
   }));
-}
-
-/** Captura de todas as empresas ativas de contas liberadas (usado pelo agendador). */
-export async function capturarTodas({ origem = 'agendado' } = {}) {
-  const todas = await Empresa.find({ ativa: true }).select('_id razaoSocial owner').lean();
-  const liberadas = await contasLiberadas(todas.map((e) => e.owner), { recurso: origem === 'agendado' ? 'captura_automatica' : undefined });
-  const empresas = todas.filter((e) => liberadas.has(String(e.owner)));
-  const resultados = [];
-  for (const emp of empresas) {
-    try {
-      const r = await capturarEmpresa(emp._id, { origem });
-      resultados.push({ empresa: emp.razaoSocial, owner: emp.owner, ...r });
-    } catch (err) {
-      resultados.push({ empresa: emp.razaoSocial, owner: emp.owner, erro: err.message });
-    }
-  }
-  return resultados;
 }

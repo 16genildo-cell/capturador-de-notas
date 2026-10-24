@@ -4,7 +4,7 @@ import { requireAuth } from './auth.js';
 
 /**
  * Pagina propria de cada empresa: tudo o que fica em /empresas/:empresaId/... (notas, captura,
- * emissao, servicos, relatorios, importacao) enxerga somente aquela empresa.
+ * relatorios, importacao) enxerga somente aquela empresa.
  *
  * Define:
  *  - req.empresaEscopo / res.locals.empresaAtual: a empresa da pagina
@@ -40,7 +40,7 @@ export function semEscopo(req, res, next) {
 
 /**
  * Restricao do usuario logado: operador limitado a algumas empresas so enxerga essas.
- * Retorna {} para quem ve todas. `campo` = 'empresa' (notas, emissoes...) ou '_id' (empresas).
+ * Retorna {} para quem ve todas. `campo` = 'empresa' (notas, capturas...) ou '_id' (empresas).
  */
 export function restricaoEmpresas(req, campo = 'empresa') {
   return req.empresasPermitidas ? { [campo]: { $in: req.empresasPermitidas } } : {};

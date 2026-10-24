@@ -58,7 +58,6 @@ const contaSchema = new mongoose.Schema(
     },
 
     config: {
-      cienciaAutomatica: { type: Boolean, default: () => env.cienciaAutomatica },
       // Quem recebe os alertas desta conta. Vazio = administradores da conta.
       alertasPara: { type: [String], default: [] },
     },

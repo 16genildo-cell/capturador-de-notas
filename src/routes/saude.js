@@ -90,7 +90,7 @@ router.post('/email-teste', async (req, res) => {
     if (!emailConfigurado()) throw new Error('E-mail não configurado. Preencha SMTP_HOST, SMTP_USUARIO, SMTP_SENHA e SMTP_REMETENTE no .env.');
     await enviarEmail({
       assunto: 'Captura Total: e-mail de teste',
-      html: montarHtml('Os alertas por e-mail estão funcionando', [{ titulo: 'Você recebera', itens: ['Resumo após cada captura automática (notas novas, canceladas e erros)', 'Aviso de certificado vencendo', 'Prazo de manifestação de NF-e terminando'] }]),
+      html: montarHtml('Os alertas por e-mail estão funcionando', [{ titulo: 'Você recebera', itens: ['Aviso de certificado vencendo', 'Prazo de manifestação de NF-e terminando'] }]),
       para: [req.user.email],
     });
     req.session.flash = { type: 'ok', msg: `E-mail de teste enviado para ${req.user.email}.` };

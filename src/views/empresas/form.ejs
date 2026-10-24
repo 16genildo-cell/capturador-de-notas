@@ -68,16 +68,4 @@
       <a href="<%= locals.base || '/empresas' %>" class="btn btn-ghost">Cancelar</a>
     </div>
   </form>
-  <% if (empresa._id) { %>
-    <section class="card">
-      <div class="card-head"><h2>Emissao de NFS-e</h2></div>
-      <p class="muted small">Regime tributario, serie, ambiente (teste ou producao) e padroes da nota emitida pelo Emissor Nacional.</p>
-      <a href="<%= locals.base || '/empresas/' + empresa._id %>/emitir/configurar/<%= empresa._id %>" class="btn btn-sm">Configurar emissao</a>
-    </section>
-    <section class="card">
-      <div class="card-head"><h2>Emissao de NF-e e NFC-e</h2></div>
-      <p class="muted small">Venda de produtos: Inscricao Estadual, endereco, series, CSC da NFC-e e regime do Simples.</p>
-      <a href="<%= locals.base || '/empresas/' + empresa._id %>/vendas/configurar/<%= empresa._id %>" class="btn btn-sm">Configurar NF-e / NFC-e</a>
-    </section>
-  <% } %>
 </div>

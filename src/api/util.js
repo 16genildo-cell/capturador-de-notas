@@ -46,6 +46,6 @@ export function contaPublica(conta) {
     acesso: conta.acesso(),
     temAssinatura: Boolean(conta.asaas?.subscriptionId),
     linkPagamento: conta.asaas?.linkPagamento || null,
-    config: { cienciaAutomatica: Boolean(conta.config?.cienciaAutomatica), alertasPara: conta.config?.alertasPara || [] },
+    config: { cienciaAutomatica: false /* ciencia so manual */, alertasPara: conta.config?.alertasPara || [] },
   };
 }

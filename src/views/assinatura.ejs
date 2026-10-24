@@ -83,10 +83,6 @@
     <label>Quem recebe os alertas (certificado vencendo, notas novas, prazos). Separe por virgula; vazio = administradores do escritorio.
       <input type="text" name="alertasPara" value="<%= (conta.config && conta.config.alertasPara || []).join(', ') %>" />
     </label>
-    <label class="check-termos">
-      <input type="checkbox" name="cienciaAutomatica" <%= conta.config && conta.config.cienciaAutomatica ? 'checked' : '' %> />
-      <span>Enviar a <strong>Ciencia da Operacao</strong> automaticamente a cada captura (libera o XML completo das NF-e recebidas).</span>
-    </label>
     <div class="form-actions"><button class="btn btn-primary">Salvar</button></div>
   </form>
 </section>

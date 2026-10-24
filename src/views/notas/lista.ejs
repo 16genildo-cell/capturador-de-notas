@@ -22,6 +22,34 @@
 <form method="get" action="<%= base %>/notas" class="filters card" id="form-filtros">
   <input type="hidden" name="categoria" value="<%= filtros.categoria %>" />
   <input type="hidden" name="mes" value="<%= filtros.mes %>" id="campo-mes" />
+  <% if (locals.usaCertificado) { %>
+    <div class="filtro filtro-cliente filtro-certificado">
+      <label for="filtro-certificado">Certificado</label>
+      <% if (certificados.length) { %>
+        <select name="certificado" id="filtro-certificado" data-seletor-cliente data-placeholder="Digite pelo menos 3 letras do certificado ou o CNPJ/CPF">
+          <option value="">Nenhum (só as notas já capturadas)</option>
+          <% certificados.forEach((c) => { %>
+            <option value="<%= c._id %>" data-doc="<%= c.doc %><%= c.vencido ? ' · vencido' : '' %>" <%= filtros.certificado === String(c._id) ? 'selected' : '' %>><%= c.apelido %></option>
+          <% }) %>
+        </select>
+        <span class="filtro-dica">Com um certificado escolhido, o Filtrar busca as notas novas na SEFAZ e no Ambiente Nacional.</span>
+      <% } else { %>
+        <a href="/certificados/novo" class="btn">Enviar certificado A1</a>
+      <% } %>
+    </div>
+  <% } %>
+  <% if (empresas.length > 1) {
+    const fmtDoc = (d) => { d = String(d || '').replace(/\D/g, ''); return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : d; }; %>
+    <div class="filtro filtro-cliente">
+      <label for="filtro-empresa">Cliente</label>
+      <select name="empresa" id="filtro-empresa" data-seletor-cliente data-enviar>
+        <option value="">Todos os clientes</option>
+        <% empresas.forEach((e) => { %>
+          <option value="<%= e._id %>" data-doc="<%= fmtDoc(e.cnpj) %>" <%= String(filtros.empresa) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
+        <% }) %>
+      </select>
+    </div>
+  <% } %>
   <input type="text" name="q" value="<%= filtros.q %>" placeholder="Nome, CPF/CNPJ, numero ou chave..." />
 
   <label class="filtro">Mes
@@ -60,17 +88,8 @@
       <option value="manifestar" <%= filtros.situacao === 'manifestar' ? 'selected' : '' %>>Aguardando manifestacao</option>
     </select>
   </label>
-  <% if (empresas.length > 1) { %>
-    <label class="filtro">Cliente (CNPJ/CPF)
-      <select name="empresa">
-        <option value="">Todas</option>
-        <% empresas.forEach((e) => { %>
-          <option value="<%= e._id %>" <%= String(filtros.empresa) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
-        <% }) %>
-      </select>
-    </label>
-  <% } %>
-  <button class="btn btn-primary">Filtrar</button>
+  <input type="hidden" name="buscar" id="campo-buscar" value="" />
+  <button class="btn btn-primary" id="btn-filtrar">Filtrar</button>
   <a href="<%= base %>/notas" class="btn btn-ghost">Limpar</a>
 </form>
 
@@ -78,7 +97,16 @@
   // Mes + ano viram o parametro "mes=AAAA-MM"; so ano vira "ano=AAAA".
   (function () {
     var form = document.getElementById('form-filtros');
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', function (ev) {
+      // Filtrar com certificado escolhido: busca as notas novas na Receita antes de listar
+      var cert = document.getElementById('filtro-certificado');
+      var btn = document.getElementById('btn-filtrar');
+      if (cert && cert.value && ev.submitter === btn) {
+        document.getElementById('campo-buscar').value = '1';
+        btn.disabled = true;
+        btn.classList.add('btn-buscando');
+        btn.textContent = 'Buscando na Receita...';
+      }
       var m = document.getElementById('sel-mes').value;
       var a = document.getElementById('sel-ano');
       var campoMes = document.getElementById('campo-mes');
@@ -205,3 +233,4 @@
     <% } %>
   <% } %>
 </div>
+<script src="/static/js/seletor-cliente.js"></script>

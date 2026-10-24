@@ -6,44 +6,143 @@
   <title><%= title %><%= locals.empresaAtual ? ' · ' + empresaAtual.razaoSocial : '' %> · <%= locals.nomeProduto || 'Captura Total' %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@700;900&display=swap" />
   <link rel="stylesheet" href="/static/css/app.css" />
+  <script>try { if (localStorage.getItem('menuRecolhido') === '1') document.documentElement.classList.add('menu-recolhido'); } catch (e) {}</script>
 </head>
+<%
+  const tem = (id) => !locals.recursos || locals.recursos.includes(id);
+  const cp = currentPath || '/';
+  const q = locals.queryAtual || {};
+  const em = (prefixo) => cp === prefixo || cp.startsWith(prefixo + '/');
+  const produto = locals.nomeProduto || 'Captura Total';
+
+  // Icones (traco simples, 24x24)
+  const I = {
+    painel: '<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/>',
+    captura: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+    notas: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+    produtos: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    servicos: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    cte: '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.6a1 1 0 0 0-.2-.6L18.4 8.4A1 1 0 0 0 17.6 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+    eventos: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+    relatorios: '<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    importar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+    clientes: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/>',
+    certificados: '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 16c.6-1.5 1.7-2 3-2s2.4.5 3 2"/><path d="M14 9h4"/><path d="M14 13h4"/>',
+    certidoes: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/>',
+    usuarios: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    conta: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+    saude: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    suporte: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    plataforma: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+    senha: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+    sair: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+    sino: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    relogio: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  };
+  const icone = (nome, tam = 18) => `<svg class="ico" width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[nome] || I.notas}</svg>`;
+
+  // Item de menu: [rotulo, href, ativo, icone, selo]
+  const item = (rotulo, href, ativo, ico, selo) =>
+    `<a href="${href}" class="${ativo ? 'active' : ''}">${icone(ico)}<span>${rotulo}</span>${selo ? `<span class="nav-selo">${selo}</span>` : ''}</a>`;
+  const naNota = cp === '/notas';
+  const cat = naNota ? (q.categoria || '') : null;
+
+  // Cabecalho da pagina: icone e subtitulo conforme a secao
+  const secoes = [
+    ['/notas', 'notas', 'Consulte, filtre e baixe os documentos capturados'],
+    ['/relatorios', 'relatorios', 'Entradas, saidas e totais por periodo'],
+    ['/importar', 'importar', 'Envie XMLs soltos ou em ZIP para o sistema'],
+    ['/empresas', 'clientes', 'Gerencie os clientes do escritorio'],
+    ['/certificados', 'certificados', 'Gerencie os certificados cadastrados no sistema'],
+    ['/certidoes', 'certidoes', 'Certidoes negativas dos clientes'],
+    ['/usuarios', 'usuarios', 'Equipe, perfis e acessos'],
+    ['/assinatura', 'conta', 'Plano, cobranca e dados do escritorio'],
+    ['/saude', 'saude', 'Situacao do servidor, banco e backups'],
+    ['/chat', 'suporte', 'Fale com a nossa equipe'],
+    ['/plataforma', 'plataforma', 'Administracao da plataforma'],
+    ['/minha-senha', 'senha', 'Altere a sua senha de acesso'],
+  ];
+  const secao = cp === '/' ? ['/', 'painel', 'Resumo das notas e da captura de todos os clientes'] : (secoes.find(([p]) => em(p)) || [null, 'notas', '']);
+  const subtitulo = locals.subtitulo || secao[2];
+  const ac = locals.acessoConta;
+  const mostrarFaixa = ac && ac.aviso && (ac.motivo !== 'teste' || ac.diasRestantes <= 7) && !cp.startsWith('/assinatura');
+%>
 <body>
+  <% if (mostrarFaixa) { %>
+    <div class="faixa-topo <%= ac.motivo === 'teste' ? '' : 'faixa-alerta' %>">
+      <%- icone('relogio', 16) %>
+      <span><%= ac.aviso %></span>
+      <a href="/assinatura#planos" class="faixa-btn"><%= ac.motivo === 'teste' ? 'Contratar agora' : 'Regularizar' %></a>
+    </div>
+  <% } %>
+
+  <header class="cabecalho">
+    <button type="button" class="btn-icone" id="alternar-menu" aria-label="Mostrar ou esconder o menu" title="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+    </button>
+    <a href="/" class="marca" aria-label="<%= produto %> - inicio">
+      <span class="marca-simbolo" aria-hidden="true"><%= produto.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() %></span>
+      <span class="marca-nome"><%= produto %></span>
+    </a>
+    <div class="cabecalho-acoes">
+      <% if (locals.sefazAmbiente !== 'producao') { %>
+        <span class="tag tag-warn" title="Ambiente de testes da SEFAZ: nao existem notas reais.">SEFAZ: homologacao</span>
+      <% } %>
+      <% if (locals.ehAdmin && !locals.ehCliente && tem('chat_suporte')) { %>
+        <a href="/chat" class="btn-icone" title="Mensagens do suporte" aria-label="Mensagens do suporte"><%- icone('sino', 20) %><% if (locals.chatNaoLidas) { %><span class="ponto-aviso"><%= chatNaoLidas %></span><% } %></a>
+      <% } %>
+      <% if (locals.user) { %>
+        <a href="/minha-senha" class="btn-icone" title="<%= user.nome %> · trocar senha" aria-label="Minha conta"><%- icone('senha', 20) %></a>
+        <form method="post" action="/logout" class="inline"><button class="btn-icone" title="Sair" aria-label="Sair"><%- icone('sair', 20) %></button></form>
+      <% } %>
+    </div>
+  </header>
+
   <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-mark">CT</span>
-        <span class="brand-name"><%= locals.nomeProduto || 'Captura Total' %></span>
-      </div>
+    <aside class="sidebar" id="menu-lateral">
       <nav class="nav">
-        <% const tem = (id) => !locals.recursos || locals.recursos.includes(id); %>
-        <a href="/" class="<%= currentPath === '/' ? 'active' : '' %>">Painel</a>
-        <% if (!locals.ehCliente) { %><a href="/captura" class="<%= currentPath.startsWith('/captura') ? 'active' : '' %>">Captura</a><% } %>
-        <a href="/notas" class="<%= currentPath.startsWith('/notas') ? 'active' : '' %>">Notas fiscais</a>
-        <% if (!locals.ehCliente) { %>
-          <% if (tem('emissao_nfse')) { %><a href="/emitir" class="<%= currentPath.startsWith('/emitir') ? 'active' : '' %>">Emitir NFS-e</a><% } %>
-          <% if (tem('emissao_nfe')) { %><a href="/vendas" class="<%= currentPath.startsWith('/vendas') ? 'active' : '' %>">Emitir NF-e / NFC-e</a><% } %>
-        <% } %>
-        <% if (tem('relatorios')) { %><a href="/relatorios" class="<%= currentPath.startsWith('/relatorios') ? 'active' : '' %>">Relatorios</a><% } %>
-        <% if (locals.ehAdmin && tem('importar_xml')) { %><a href="/importar" class="<%= currentPath.startsWith('/importar') ? 'active' : '' %>">Importar XML</a><% } %>
-        <a href="/empresas" class="<%= currentPath === '/empresas' || currentPath === '/empresas/nova' ? 'active' : '' %>"><%= locals.ehCliente ? 'Minhas empresas' : 'Clientes' %></a>
+        <div class="nav-grupo">Início</div>
+        <%- item('Painel', '/', cp === '/', 'painel') %>
+
+        <div class="nav-grupo">Documentos fiscais</div>
+        <%- item('Todas as notas', '/notas', naNota && !cat, 'notas') %>
+        <%- item('NF-e / NFC-e', '/notas?categoria=produtos', cat === 'produtos', 'produtos') %>
+        <%- item('NFS-e', '/notas?categoria=servicos', cat === 'servicos', 'servicos') %>
+        <%- item('CT-e', '/notas?categoria=cte', cat === 'cte', 'cte') %>
+        <%- item('Eventos', '/notas?categoria=eventos', cat === 'eventos', 'eventos') %>
+        <% if (tem('relatorios')) { %><%- item('Relatórios', '/relatorios', em('/relatorios'), 'relatorios') %><% } %>
+
+        <% if (locals.ehAdmin && tem('importar_xml')) { %><%- item('Importar XML', '/importar', em('/importar'), 'importar') %><% } %>
+
+        <div class="nav-grupo">Cadastros</div>
+        <%- item(locals.ehCliente ? 'Minhas empresas' : 'Clientes', '/empresas', cp === '/empresas' || cp === '/empresas/nova', 'clientes') %>
         <% if (locals.ehAdmin) { %>
-          <a href="/certificados" class="<%= currentPath.startsWith('/certificados') ? 'active' : '' %>">Certificados</a>
-          <a href="/usuarios" class="<%= currentPath.startsWith('/usuarios') ? 'active' : '' %>">Usuarios</a>
-          <a href="/saude" class="<%= currentPath.startsWith('/saude') ? 'active' : '' %>">Saude do sistema</a>
+          <%- item('Certificados', '/certificados', em('/certificados'), 'certificados') %>
+          <%- item('Usuários', '/usuarios', em('/usuarios'), 'usuarios') %>
         <% } %>
-        <% if (!locals.ehCliente) { %><a href="/assinatura" class="<%= currentPath.startsWith('/assinatura') ? 'active' : '' %>">Meu escritorio</a><% } %>
-        <% if (locals.ehAdmin && !locals.ehCliente && tem('chat_suporte')) { %><a href="/chat" class="<%= currentPath === '/chat' ? 'active' : '' %>">Suporte<% if (locals.chatNaoLidas) { %> <span class="tag tag-warn" title="Mensagens novas do suporte"><%= chatNaoLidas %></span><% } %></a><% } %>
-        <% if (locals.ehPlataforma) { %><a href="/plataforma/chat" class="<%= currentPath.startsWith('/plataforma/chat') ? 'active' : '' %>">Chat dos escritorios<% if (locals.chatSuporteNaoLidas) { %> <span class="tag tag-warn"><%= chatSuporteNaoLidas %></span><% } %></a><% } %>
-        <% if (locals.ehPlataforma) { %><a href="/plataforma" class="<%= currentPath.startsWith('/plataforma') ? 'active' : '' %>">Plataforma<% if (locals.mensagensNovas) { %> <span class="tag tag-warn" title="Mensagens novas do site"><%= mensagensNovas %></span><% } %></a><% } %>
+
+        <% if (!locals.ehCliente) { %>
+          <div class="nav-grupo">Configurações</div>
+          <%- item('Meu escritório', '/assinatura', em('/assinatura'), 'conta') %>
+          <% if (locals.ehAdmin) { %><%- item('Saúde do sistema', '/saude', em('/saude'), 'saude') %><% } %>
+          <% if (locals.ehAdmin && tem('chat_suporte')) { %><%- item('Suporte', '/chat', cp === '/chat', 'suporte', locals.chatNaoLidas) %><% } %>
+        <% } %>
+
+        <% if (locals.ehPlataforma) { %>
+          <div class="nav-grupo">Plataforma</div>
+          <%- item('Chat dos escritórios', '/plataforma/chat', em('/plataforma/chat'), 'suporte', locals.chatSuporteNaoLidas) %>
+          <%- item('Administração', '/plataforma', em('/plataforma') && !em('/plataforma/chat'), 'plataforma', locals.mensagensNovas) %>
+        <% } %>
       </nav>
+
       <% const menu = locals.empresasMenu || []; if (menu.length) { %>
         <div class="nav-empresas">
-          <div class="nav-titulo"><%= locals.ehCliente ? 'Minhas empresas' : 'Clientes do escritorio' %></div>
+          <div class="nav-grupo"><%= locals.ehCliente ? 'Minhas empresas' : 'Clientes do escritório' %></div>
           <% if (menu.length <= 8) { %>
             <% menu.forEach((e) => { const ativa = locals.empresaAtual && String(empresaAtual._id) === String(e._id); %>
-              <a href="/empresas/<%= e._id %>" class="<%= ativa ? 'active' : '' %>" title="<%= e.razaoSocial %>"><%= e.razaoSocial %></a>
+              <a href="/empresas/<%= e._id %>" class="<%= ativa ? 'active' : '' %>" title="<%= e.razaoSocial %>"><span class="nav-inicial"><%= (e.razaoSocial || '?').charAt(0).toUpperCase() %></span><span><%= e.razaoSocial %></span></a>
             <% }) %>
           <% } else { %>
             <select aria-label="Abrir a pagina do cliente" onchange="if(this.value)location.href='/empresas/'+this.value">
@@ -53,57 +152,77 @@
           <% } %>
         </div>
       <% } %>
-      <div class="sidebar-foot">
-        <% if (locals.user) { %>
-          <div class="user">
-            <div class="user-name"><%= user.nome %></div>
-            <div class="user-mail"><%= user.email %> · <%= ({ admin: 'administrador', operador: 'equipe', cliente: 'cliente do escritorio' })[user.role] || user.role %></div>
-          </div>
-          <a href="/minha-senha" class="btn-link">Trocar senha</a> ·
-          <form method="post" action="/logout"><button class="btn-link">Sair</button></form>
-        <% } %>
-      </div>
+
+      <% if (locals.user) { %>
+        <div class="sidebar-foot">
+          <div class="user-name"><%= user.nome %></div>
+          <div class="user-mail"><%= user.email %> · <%= ({ admin: 'administrador', operador: 'equipe', cliente: 'cliente do escritório' })[user.role] || user.role %></div>
+        </div>
+      <% } %>
     </aside>
+    <div class="menu-fundo" id="menu-fundo" hidden></div>
 
     <main class="content">
-      <% if (locals.acessoSuporte) { %>
-        <div class="flash flash-info" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-          <span>Voce esta acessando o escritorio <strong><%= acessoSuporte.nome %></strong> como suporte. O que fizer aqui vale para o escritorio.</span>
-          <form method="post" action="/suporte/voltar" class="inline"><button class="btn btn-sm btn-primary">Voltar para a plataforma</button></form>
-        </div>
-      <% } %>
-      <header class="topbar">
-        <h1><%= title %></h1>
-        <% if (locals.sefazAmbiente !== 'producao') { %>
-          <span class="tag tag-warn" title="Ambiente de testes da SEFAZ: nao existem notas reais.">SEFAZ: homologacao (testes)</span>
+      <div class="conteudo-caixa">
+        <% if (locals.acessoSuporte) { %>
+          <div class="flash flash-info" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <span>Voce esta acessando o escritorio <strong><%= acessoSuporte.nome %></strong> como suporte. O que fizer aqui vale para o escritorio.</span>
+            <form method="post" action="/suporte/voltar" class="inline"><button class="btn btn-sm btn-primary">Voltar para a plataforma</button></form>
+          </div>
         <% } %>
-      </header>
 
-      <% const ac = locals.acessoConta; if (ac && ac.aviso && (ac.motivo !== 'teste' || ac.diasRestantes <= 7) && !currentPath.startsWith('/assinatura')) { %>
-        <div class="flash <%= ac.motivo === 'teste' ? 'flash-info' : 'flash-erro' %> faixa-conta">
-          <span><%= ac.aviso %></span>
-          <a href="/assinatura#planos" class="btn btn-sm <%= ac.motivo === 'teste' ? '' : 'btn-primary' %>"><%= ac.motivo === 'teste' ? 'Contratar' : 'Regularizar' %></a>
-        </div>
-      <% } %>
+        <% if (!locals.empresaAtual) { %>
+          <header class="topbar">
+            <span class="topbar-icone"><%- icone(secao[1], 22) %></span>
+            <div class="topbar-texto">
+              <h1><%= title %></h1>
+              <% if (subtitulo) { %><p><%= subtitulo %></p><% } %>
+            </div>
+          </header>
+        <% } %>
 
-      <% (locals.alertaCertificados || []).forEach((c) => { %>
-        <div class="flash flash-erro">
-          Certificado <strong><%= c.apelido %></strong>
-          <%= c.vencido ? 'VENCEU em' : `vence em ${c.dias} dia(s), em` %>
-          <%= new Date(c.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>.
-          <%= c.vencido ? 'A captura desta empresa esta parada.' : 'Renove e envie o novo certificado para a captura nao parar.' %>
-          <% if (locals.ehAdmin) { %><a href="/certificados/novo" class="link">Enviar novo certificado</a><% } %>
-        </div>
-      <% }) %>
+        <% (locals.alertaCertificados || []).forEach((c) => { %>
+          <div class="flash flash-erro">
+            Certificado <strong><%= c.apelido %></strong>
+            <%= c.vencido ? 'VENCEU em' : `vence em ${c.dias} dia(s), em` %>
+            <%= new Date(c.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>.
+            <%= c.vencido ? 'A captura desta empresa esta parada.' : 'Renove e envie o novo certificado para a captura nao parar.' %>
+            <% if (locals.ehAdmin) { %><a href="/certificados/novo" class="link">Enviar novo certificado</a><% } %>
+          </div>
+        <% }) %>
 
-      <% if (locals.empresaAtual) { %><%- include('empresas/_abas') %><% } %>
+        <% if (locals.empresaAtual) { %><%- include('empresas/_abas') %><% } %>
 
-      <% if (typeof flash !== 'undefined' && flash) { %>
-        <div class="flash flash-<%= flash.type %>"><%= flash.msg %></div>
-      <% } %>
+        <% if (typeof flash !== 'undefined' && flash) { %>
+          <div class="flash flash-<%= flash.type %>"><%= flash.msg %><% if (flash.link) { %> <a href="<%= flash.link.href %>" class="link"><%= flash.link.texto %></a><% } %></div>
+        <% } %>
 
-      <%- body %>
+        <%- body %>
+      </div>
+      <footer class="rodape"><%= produto %> · gestão fiscal para escritórios de contabilidade · <%= new Date().getFullYear() %></footer>
     </main>
   </div>
+
+  <script>
+    (function () {
+      var raiz = document.documentElement;
+      var fundo = document.getElementById('menu-fundo');
+      var celular = function () { return window.matchMedia('(max-width: 900px)').matches; };
+      function fecharCelular() { raiz.classList.remove('menu-aberto'); fundo.hidden = true; }
+      document.getElementById('alternar-menu').addEventListener('click', function () {
+        if (celular()) {
+          var abrir = !raiz.classList.contains('menu-aberto');
+          raiz.classList.toggle('menu-aberto', abrir);
+          fundo.hidden = !abrir;
+        } else {
+          var recolher = !raiz.classList.contains('menu-recolhido');
+          raiz.classList.toggle('menu-recolhido', recolher);
+          try { localStorage.setItem('menuRecolhido', recolher ? '1' : '0'); } catch (e) {}
+        }
+      });
+      fundo.addEventListener('click', fecharCelular);
+      window.addEventListener('resize', function () { if (!celular()) fecharCelular(); });
+    })();
+  </script>
 </body>
 </html>

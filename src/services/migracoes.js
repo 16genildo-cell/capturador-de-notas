@@ -1,11 +1,7 @@
-import { EmissaoNfe } from '../models/EmissaoNfe.js';
-import { ProdutoNfe } from '../models/ProdutoNfe.js';
 import { NotaFiscal } from '../models/NotaFiscal.js';
 import { CapturaLog } from '../models/CapturaLog.js';
 import { Certificado } from '../models/Certificado.js';
 import { User } from '../models/User.js';
-import { EmissaoNfse } from '../models/EmissaoNfse.js';
-import { ServicoNfse } from '../models/ServicoNfse.js';
 import { Conta } from '../models/Conta.js';
 import { EventoCobranca } from '../models/EventoCobranca.js';
 import { SessaoApi } from '../models/SessaoApi.js';
@@ -37,7 +33,7 @@ export async function executarMigracoes() {
     console.log(`[migracao] ${r.modifiedCount} evento(s) ajustado(s).`);
   }
   // Cria/atualiza os indices (deixa listagens e relatorios rapidos com muitas notas)
-  await Promise.all([Aviso.syncIndexes(), Atendimento.syncIndexes(), ChatMensagem.syncIndexes(), NotaFiscal.syncIndexes(), CapturaLog.syncIndexes(), Certificado.syncIndexes(), User.syncIndexes(), EmissaoNfse.syncIndexes(), ServicoNfse.syncIndexes(), EmissaoNfe.syncIndexes(), ProdutoNfe.syncIndexes(), Conta.syncIndexes(), EventoCobranca.syncIndexes(), SessaoApi.syncIndexes(), Dispositivo.syncIndexes()]);
+  await Promise.all([Aviso.syncIndexes(), Atendimento.syncIndexes(), ChatMensagem.syncIndexes(), NotaFiscal.syncIndexes(), CapturaLog.syncIndexes(), Certificado.syncIndexes(), User.syncIndexes(), Conta.syncIndexes(), EventoCobranca.syncIndexes(), SessaoApi.syncIndexes(), Dispositivo.syncIndexes()]);
 }
 
 /** SaaS: toda conta que ja existia antes vira "cortesia" (continua funcionando, sem cobranca). */

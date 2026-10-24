@@ -63,7 +63,7 @@ test('cliente do escritorio: painel antigo so permite consulta', () => {
   for (const path of ['/', '/notas', `/notas/${id}`, `/notas/${id}/pdf`, '/notas/exportar', '/relatorios', '/empresas', `/empresas/${id}`, `/empresas/${id}/notas`, '/minha-senha']) {
     assert.equal(chamar(restringirClienteSite, { path }).next, true, `deveria abrir ${path}`);
   }
-  for (const path of ['/captura', '/emitir', '/vendas', '/assinatura', '/usuarios', '/certificados', '/importar', '/saude', `/empresas/${id}/captura`, `/empresas/${id}/emitir`, '/empresas/nova']) {
+  for (const path of ['/captura', '/assinatura', '/usuarios', '/certificados', '/importar', '/saude', `/empresas/${id}/captura`, '/empresas/nova']) {
     const r = chamar(restringirClienteSite, { path });
     assert.equal(r.next, false, `deveria bloquear ${path}`);
     assert.equal(r.status, 403);

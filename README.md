@@ -1,6 +1,6 @@
 # Captura Total
 
-Sistema web (SaaS por assinatura) para **captura automática de notas fiscais eletrônicas** (NF-e, NFC-e e NFS-e) a partir dos web services oficiais, usando o **certificado digital A1** da empresa. Faz, de forma simplificada, o que sistemas como o vFisco fazem: baixa os XMLs direto da SEFAZ (e do padrão nacional / prefeituras, no caso da NFS-e) e organiza tudo num painel.
+Sistema web (SaaS por assinatura) para **captura de notas fiscais eletrônicas** (NF-e, NFC-e e NFS-e) a partir dos web services oficiais, usando o **certificado digital A1** da empresa. Faz, de forma simplificada, o que sistemas como o vFisco fazem: baixa os XMLs direto da SEFAZ (e do padrão nacional / prefeituras, no caso da NFS-e) e organiza tudo num painel.
 
 Construído com **Node.js + Express + EJS + MongoDB**.
 
@@ -61,10 +61,10 @@ Em desenvolvimento: `npm run dev` (reinicia ao salvar).
 
 1. Confira `SEFAZ_AMBIENTE=producao` no `.env` (em homologação não existem notas reais).
 2. **Certificados →** enviar o `.pfx`/`.p12` e a senha.
-3. **Captura →** cadastrar a empresa do certificado (CNPJ e UF já vêm preenchidos) e clicar em **Capturar agora**.
-   O agendador repete a captura sozinho (`SCHEDULER_CRON`, padrão: a cada hora).
+3. **Clientes →** cadastrar a empresa do certificado (CNPJ e UF já vêm preenchidos).
+   A busca é sempre manual: em **Notas fiscais**, escolha o certificado e clique em **Filtrar** (ou use **Capturar agora** na página do cliente).
 4. **Notas fiscais →** filtrar, buscar e baixar o XML. Notas marcadas como **resumo** têm o botão
-   **Baixar XML completo**, que envia a Ciência da Operação e baixa o XML (ou ligue `SEFAZ_CIENCIA_AUTOMATICA=true`).
+   **Baixar XML completo**, que envia a Ciência da Operação e baixa o XML.
 
 ### Pessoa física (CPF)
 
@@ -83,25 +83,13 @@ Cadastre o contribuinte com o **CPF** e vincule o **e-CPF A1** da própria pesso
 
 ## Recursos
 
-- **Captura automatica** de NF-e/NFC-e (SEFAZ), NFS-e (Ambiente Nacional) e CT-e, por CNPJ ou CPF.
+- **Captura manual** de NF-e/NFC-e (SEFAZ), NFS-e (Ambiente Nacional) e CT-e, por CNPJ ou CPF.
 - **Importar XML** (soltos ou em ZIP) para notas de venda emitidas por voce e historico com mais de 90 dias.
 - **Manifestacao do destinatario**: ciencia (libera o XML completo), confirmacao, desconhecimento e operacao nao realizada, com alerta de prazo (180 dias).
 - **PDF**: DANFE (NF-e, leiaute retrato), DANFSe (layout oficial NT 008) e DACTE; download em lote (ZIP).
 - **Filtros** por mes, ano, periodo, tipo, tomadas/prestadas e situacao; **relatorios** mensais, por fornecedor/cliente, CFOP e NCM, com **Excel**.
 - **Usuarios** com perfis (administrador/operador), cadastro publico fechado, protecao CSRF e limite de tentativas de login.
 - **Backup diario** do banco, **pagina de saude do sistema** e **alertas por e-mail** (opcional).
-
-## Emissao de NFS-e (Emissor Nacional)
-
-Menu **Emitir NFS-e**. Gratuito: usa a API oficial da Sefin Nacional com o certificado A1 do prestador.
-
-1. Em **Emitir NFS-e -> configurar**, informe o codigo IBGE do municipio, o regime (nao optante, MEI ou ME/EPP) e a serie.
-   Use **Verificar agora** para confirmar se o municipio libera o Emissor Nacional.
-2. Comece em **producao restrita** (teste, sem valor fiscal). Emita notas de teste e confira o PDF.
-3. Quando estiver tudo certo, mude o ambiente para **producao**.
-
-O numero da DPS so avanca quando a Sefin autoriza; reenviar apos uma falha de conexao e seguro (a nota ja gerada e recuperada).
-O enquadramento fiscal (codigo do servico, retencao, aliquota) e responsabilidade do emitente: confirme com o contador.
 
 ## Comandos uteis
 
@@ -128,7 +116,7 @@ src/
     crypto/      cofre AES-256-GCM + leitura do .pfx (node-forge)
     sefaz/       cliente SOAP mTLS + NFeDistribuicaoDFe + parser de documentos
     nfse/        adaptadores (nacional, exemplo municipal) + registro
-    scheduler/   captura automática (node-cron)
+    scheduler/   tarefas automáticas: backup, alertas e limpeza (node-cron)
     capturaService.js   orquestra NF-e + NFS-e por empresa
   views/         EJS (painel, notas, empresas, certificados)
   public/css/    estilo
@@ -141,7 +129,7 @@ src/
 **Pronto e funcional**
 - Autenticação, empresas, upload/validação e criptografia do certificado.
 - Cliente SOAP com mTLS e o fluxo completo da `NFeDistribuicaoDFe` (envelope, busca incremental por NSU, descompactação gzip/base64, parsing e gravação dos XMLs, controle de duplicatas).
-- Dashboard, listagem com filtros, download de XML, agendador e logs de execução.
+- Dashboard, listagem com filtros, download de XML, logs de execução.
 - Arquitetura extensível de NFS-e com um adaptador de exemplo.
 
 **Precisa da sua ação / ambiente real**
@@ -161,7 +149,7 @@ O sistema funciona como **SaaS**: qualquer pessoa cria a propria conta em `/regi
 | Site com planos (visitante) | `/` |
 | Cadastro com teste gratis | `/registrar` |
 | Esqueci a senha (link por e-mail) | `/esqueci-senha` |
-| Plano, fatura, dados da conta, alertas, ciencia automatica | `/assinatura` (menu **Minha conta**) |
+| Plano, fatura, dados da conta, alertas | `/assinatura` (menu **Minha conta**) |
 | Painel do dono da plataforma: todas as contas, receita, liberar/suspender | `/plataforma` (so para `ADMIN_EMAIL` / `PLATAFORMA_ADMINS`) |
 | Notificacoes de pagamento do Asaas | `POST /webhooks/asaas` |
 | Verificacao de saude (Render/Railway) | `/healthz` |
@@ -190,7 +178,7 @@ A assinatura e criada com forma de pagamento "a escolha do cliente" (Pix, boleto
 4. Preencha as variaveis pedidas: `MONGODB_URI`, `APP_URL`, `CERT_ENCRYPTION_KEY`, `ADMIN_EMAIL`, `ADMIN_SENHA`, Asaas e SMTP.
    - **Migrando do seu computador?** Use a MESMA `CERT_ENCRYPTION_KEY` do seu `.env` atual, senao os certificados ja cadastrados nao abrem. Guarde essa chave num lugar seguro.
 5. Use o plano **Starter** (pago): o gratuito "dorme" sem acesso e a captura automatica para.
-6. Mantenha **1 instancia**: o agendador e as travas de captura ficam na memoria do servidor.
+6. Mantenha **1 instancia**: as travas de captura ficam na memoria do servidor.
 7. Aponte seu dominio em *Settings → Custom Domains* e atualize `APP_URL`.
 
 ### Publicar no Railway

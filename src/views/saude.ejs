@@ -9,11 +9,6 @@
     <span class="stat-value small-value"><span class="tag <%= banco.ok ? 'tag-ok' : 'tag-err' %>"><%= banco.ok ? 'conectado' : 'erro' %></span></span>
     <span class="muted small"><%= banco.ok ? `MongoDB ${banco.versao} · ${banco.ms} ms` : banco.erro %></span>
   </div><% } %>
-  <div class="card stat">
-    <span class="stat-label">Captura automatica</span>
-    <span class="stat-value small-value"><span class="tag <%= tarefas.captura.ativa ? (tarefas.captura.erro ? 'tag-err' : 'tag-ok') : 'tag-warn' %>"><%= tarefas.captura.ativa ? (tarefas.captura.rodando ? 'rodando agora' : 'ativa') : 'desligada' %></span></span>
-    <span class="muted small">Agenda "<%= tarefas.captura.agenda %>" · ultima: <%= fmt(tarefas.captura.ultima) %></span>
-  </div>
 <% if (plataforma) { %>  <div class="card stat">
     <span class="stat-label">Backup</span>
     <span class="stat-value small-value"><span class="tag <%= backups.length ? 'tag-ok' : 'tag-warn' %>"><%= backups.length ? 'em dia' : 'nenhum ainda' %></span></span>

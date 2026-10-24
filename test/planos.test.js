@@ -69,7 +69,7 @@ test('conta: limites e funcionalidades vem do plano; sem plano libera tudo', () 
   assert.equal(c.limiteEmpresas(), 2);
   assert.equal(c.limiteUsuarios(), 2);
   assert.equal(c.temRecurso('relatorios'), true);
-  assert.equal(c.temRecurso('emissao_nfe'), false);
+  assert.equal(c.temRecurso('importar_xml'), false);
   const anual = new Conta({ nome: 'Y', status: 'ativa', plano: 'anual' });
   assert.equal(anual.limiteEmpresas(), Infinity);
   assert.equal(anual.limiteUsuarios(), Infinity);
@@ -186,13 +186,13 @@ test('API: funcionalidade fora do plano responde 403', () => {
   let corpo;
   const res = { status(s) { status = s; return this; }, json(j) { corpo = j; return this; } };
   let passou = false;
-  exigirRecursoApi('emissao_nfe')(req, res, () => { passou = true; });
+  exigirRecursoApi('importar_xml')(req, res, () => { passou = true; });
   assert.equal(passou, false);
   assert.equal(status, 403);
   assert.equal(corpo.codigo, 'recurso');
   exigirRecursoApi('relatorios')(req, res, () => { passou = true; });
   assert.equal(passou, true);
-  assert.equal(recursoLiberado({ ...req, ehPlataforma: true }, 'emissao_nfe'), true);
+  assert.equal(recursoLiberado({ ...req, ehPlataforma: true }, 'importar_xml'), true);
 });
 
 test('limite de usuarios da equipe', async () => {

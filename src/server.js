@@ -17,7 +17,7 @@ async function main() {
     console.log(`[web] Ambiente SEFAZ: ${env.sefazAmbiente}`);
   });
 
-  // Captura automatica, backup diario e demais tarefas (cada uma conforme o .env).
+  // Backup diario, alertas e limpeza do armazenamento (a busca de notas e sempre manual).
   startScheduler();
 }
 

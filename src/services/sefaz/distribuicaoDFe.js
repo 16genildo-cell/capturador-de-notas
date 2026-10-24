@@ -1,4 +1,3 @@
-import { cienciaAutomaticaDaConta } from '../contas.js';
 import zlib from 'node:zlib';
 import { getEndpoints, SOAP_ACTION, codigoUF } from './endpoints.js';
 import { postSoap } from './soapClient.js';
@@ -349,17 +348,7 @@ export async function capturarNFe(empresa, { origem = 'manual', maxLotes = 50 } 
 
     mensagem = ultResultado ? `${ultResultado.cStat} - ${ultResultado.xMotivo}` : 'Sem resposta';
     if (totalAtualizados > 0) mensagem += ` (${totalAtualizados} resumo(s) trocado(s) pelo XML completo)`;
-
-    // Como no vFisco: da ciencia nas notas que vieram so como resumo para liberar o XML completo.
-    if (await cienciaAutomaticaDaConta(empresa.owner)) {
-      const { manifestarPendentes } = await import('./manifestacao.js');
-      const m = await manifestarPendentes(empresa, certificado);
-      if (m.enviadas > 0 || m.erros > 0) {
-        mensagem += ` | Ciencia enviada para ${m.enviadas} nota(s)`;
-        if (m.erros > 0) mensagem += `, ${m.erros} com erro`;
-        if (m.baixadas > 0) mensagem += `, ${m.baixadas} XML(s) completo(s) baixado(s)`;
-      }
-    }
+    // A Ciencia da Operacao nunca e enviada aqui: so manualmente, pelo botao "Baixar XML completo".
   } catch (err) {
     status = totalNovos > 0 ? 'parcial' : 'erro';
     mensagem = err.message;
