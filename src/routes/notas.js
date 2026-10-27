@@ -14,6 +14,7 @@ import mongoose from 'mongoose';
 import { montarFiltroNotas, queryString, CATEGORIAS } from '../services/filtroNotas.js';
 import { gerarPdfNota, nomeArquivoNota } from '../services/pdf/documentoPdf.js';
 import { formatarDocumento } from '../utils/documento.js';
+import { analisarNota } from '../services/auditoriaFiscal.js';
 
 import { exigirRecurso, recursoLiberado, mensagemRecurso } from '../middleware/assinatura.js';
 import { marcarBaixadas, mensagemArquivoApagado } from '../services/retencao.js';
@@ -90,7 +91,7 @@ router.get('/', async (req, res) => {
       // Botao Filtrar com certificado: busca as notas novas antes de listar (e volta sem "buscar" na URL)
       if (req.query.buscar === '1') {
         req.session.flash = await buscarNotasDoCertificado(certSel, doCert);
-        return res.redirect(`/notas?${queryString(filtros, { page: '' })}`);
+        return res.redirect(`${req.base || ''}/notas?${queryString(filtros, { page: '' })}`);
       }
       const ids = doCert.map((e) => e._id);
       // Cliente escolhido junto: so se for deste certificado
@@ -101,6 +102,41 @@ router.get('/', async (req, res) => {
         filtro.empresa = { $in: ids };
       }
     }
+  } else if (req.query.buscar === '1') {
+    // Busca na SEFAZ disparada diretamente na tela de notas
+    const empId = req.empresaEscopo?._id || (filtros.empresa && mongoose.isValidObjectId(filtros.empresa) ? filtros.empresa : null);
+    if (empId) {
+      const emp = await Empresa.findOne({ _id: empId, owner, ...restricaoEmpresas(req, '_id') }).populate('certificado');
+      if (!emp) {
+        req.session.flash = { type: 'erro', msg: 'Cliente não encontrado.' };
+      } else if (!emp.certificado) {
+        req.session.flash = {
+          type: 'erro',
+          msg: `O cliente ${emp.razaoSocial} não possui certificado digital A1 vinculado.`,
+          link: { href: `/empresas/${emp._id}/editar`, texto: 'Vincular certificado' },
+        };
+      } else {
+        try {
+          const r = await capturarEmpresa(emp._id, { origem: 'manual' });
+          const novos = (r.nfe?.novos || 0) + (r.nfse?.novos || 0) + (r.cte?.novos || 0);
+          const houveErro = [r.nfe, r.nfse, r.cte].some((x) => x?.status === 'erro');
+          req.session.flash = {
+            type: houveErro ? 'erro' : novos > 0 ? 'ok' : 'info',
+            msg: `Busca na SEFAZ concluída para ${emp.razaoSocial}: ${novos} documento(s) novo(s). ` +
+              [r.nfe && `NF-e: ${r.nfe.mensagem}`, r.nfse && `NFS-e: ${r.nfse.mensagem}`, r.cte && `CT-e: ${r.cte.mensagem}`].filter(Boolean).join(' | '),
+          };
+        } catch (err) {
+          req.session.flash = { type: 'erro', msg: `Erro ao buscar na SEFAZ para ${emp.razaoSocial}: ${err.message}` };
+        }
+      }
+    } else {
+      req.session.flash = {
+        type: 'info',
+        msg: 'Para buscar novas notas diretamente na SEFAZ, selecione um Cliente ou Certificado, ou acesse a Central de Captura.',
+        link: { href: '/captura', texto: 'Ir para Central de Captura' },
+      };
+    }
+    return res.redirect(`${req.base || ''}/notas?${queryString(filtros, { page: '' })}`);
   }
 
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -151,7 +187,8 @@ router.get('/', async (req, res) => {
   }
 
   res.render('notas/lista', {
-    title: 'Notas fiscais',
+    title: req.base ? `Notas fiscais · ${req.empresaEscopo?.razaoSocial || ''}` : 'Notas armazenadas',
+    subtitulo: 'Consulte, pesquise e exporte os documentos fiscais já armazenados no sistema.',
     notas,
     certificados: certificados.map((c) => ({ ...c, doc: c.cnpjCpf ? formatarDocumento(c.cnpjCpf) : '', vencido: c.validoAte ? new Date(c.validoAte).getTime() < Date.now() : false })),
     usaCertificado,
@@ -328,6 +365,7 @@ router.get('/:id', async (req, res, next) => {
     nota,
     detalhe: detalharDocumento(nota),
     eventos,
+    alertasAuditoria: analisarNota(nota),
     prazo: ['nfe'].includes(nota.tipo) && nota.papel === 'destinatario' ? prazoManifestacao(nota.dataEmissao) : null,
     EVENTOS,
   });

@@ -38,7 +38,18 @@ const r = Router();
 
 /** Operador restrito a algumas empresas: filtro extra (vazio para quem ve todas). */
 const restricao = (req, campo) => (req.empresasPermitidas ? { [campo]: { $in: req.empresasPermitidas } } : {});
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const nome = String(file.originalname || '').toLowerCase();
+    if (nome.endsWith('.pfx') || nome.endsWith('.p12')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Envie apenas arquivos de certificado digital (.pfx ou .p12).'));
+    }
+  },
+});
 
 // ======================= Painel =======================
 r.get('/painel', async (req, res) => res.json(await montarPainel(req.conta, req.empresasPermitidas)));

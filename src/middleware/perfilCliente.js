@@ -16,16 +16,22 @@ const SITE_GET = [
   /^\/$/,
   /^\/notas(\/|$)/,
   /^\/relatorios(\/|$)/,
+  /^\/solicitacoes(\/|$)/,
   /^\/empresas\/?$/,
   new RegExp(`^/empresas/${ID}/?$`),
-  new RegExp(`^/empresas/${ID}/(notas|relatorios)(/|$)`),
+  new RegExp(`^/empresas/${ID}/(notas|relatorios|solicitacoes)(/|$)`),
   /^\/minha-senha$/,
   /^\/termos$/,
   /^\/privacidade$/,
   /^\/static\//,
   /^\/(login|esqueci-senha|redefinir-senha)(\/|$)/,
 ];
-const SITE_POST = [/^\/logout$/, /^\/minha-senha$/, /^\/login$/];
+const SITE_POST = [
+  /^\/logout$/,
+  /^\/minha-senha$/,
+  /^\/login$/,
+  new RegExp(`^(/empresas/${ID})?/solicitacoes/${ID}/enviar$`),
+];
 // Download em lote (ZIP) das notas selecionadas
 const LOTE = new RegExp(`^(/empresas/${ID})?/notas/lote$`);
 

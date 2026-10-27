@@ -27,7 +27,7 @@ const emissaoNfeSchema = new mongoose.Schema(
     chave: { type: String, index: true },
     status: {
       type: String,
-      enum: ['autorizada', 'rejeitada', 'denegada', 'sem_resposta', 'cancelada'],
+      enum: ['autorizada', 'rejeitada', 'denegada', 'sem_resposta', 'cancelada', 'contingencia'],
       required: true,
     },
     cStat: { type: String },

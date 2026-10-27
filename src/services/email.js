@@ -55,9 +55,9 @@ export function montarHtml(titulo, secoes, rodape = '') {
 }
 
 /** Envia um e-mail. Sem SMTP configurado, apenas registra no log e retorna false. */
-export async function enviarEmail({ assunto, html, texto, para }) {
+export async function enviarEmail({ assunto, html, texto, para, attachments }) {
   if (!emailConfigurado()) return false;
-  const lista = para?.length ? para : await destinatarios();
+  const lista = Array.isArray(para) ? para : (para ? [para] : await destinatarios());
   if (!lista.length) return false;
   await obterTransporte().sendMail({
     from: env.smtp.remetente,
@@ -65,6 +65,7 @@ export async function enviarEmail({ assunto, html, texto, para }) {
     subject: assunto,
     html,
     text: texto || html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+    ...(attachments?.length ? { attachments } : {}),
   });
   return true;
 }

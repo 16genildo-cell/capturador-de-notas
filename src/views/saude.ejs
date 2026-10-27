@@ -17,27 +17,57 @@
   <div class="card stat">
     <span class="stat-label">Notas armazenadas</span>
     <span class="stat-value"><%= totalNotas.toLocaleString('pt-BR') %></span>
-    <% if (plataforma) { %><span class="muted small">Servidor ativo ha <%= sistema.uptimeMin %> min · <%= sistema.memoriaMb %> MB</span><% } %>
+    <span class="muted small"><%= retencao.comXml.toLocaleString('pt-BR') %> com XML completo · <%= retencao.semXml.toLocaleString('pt-BR') %> resumidas/apagadas</span>
   </div>
+<% if (plataforma) { %>  <div class="card stat">
+    <span class="stat-label">Memória do Servidor</span>
+    <span class="stat-value small-value"><%= sistema.memoriaMb %> MB</span>
+    <span class="muted small">Heap: <%= sistema.heapUsadoMb %> / <%= sistema.heapTotalMb %> MB · Uptime: <%= sistema.uptimeMin %> min</span>
+  </div><% } %>
 </section>
 
 <section class="card">
-  <div class="card-head"><h2>Ultima captura por empresa</h2></div>
+  <div class="card-head">
+    <h2>Última captura e diagnóstico por empresa</h2>
+  </div>
   <% if (linhas.length === 0) { %>
     <p class="muted">Nenhuma empresa cadastrada.</p>
   <% } else { %>
     <div class="tabela-rolagem">
     <table class="table">
-      <thead><tr><th>Empresa</th><th>Certificado</th><th>NF-e</th><th>NFS-e</th><th>CT-e</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Certificado A1</th>
+          <th>NF-e</th>
+          <th>NFS-e</th>
+          <th>CT-e</th>
+          <th>Ações de Diagnóstico</th>
+        </tr>
+      </thead>
       <tbody>
         <% linhas.forEach((e) => { %>
           <tr>
-            <td><strong><%= e.razaoSocial %></strong><% if (e.rodando) { %> <span class="tag tag-warn">capturando</span><% } %></td>
             <td>
-              <% if (!e.certificado) { %><span class="tag tag-err">sem certificado</span>
-              <% } else if (e.certDias < 0) { %><span class="tag tag-err">vencido</span>
-              <% } else if (e.certDias <= 30) { %><span class="tag tag-warn">vence em <%= e.certDias %> dia(s)</span>
-              <% } else { %><span class="tag tag-ok">ok</span> <span class="muted small"><%= e.certDias %> dias</span><% } %>
+              <strong><%= e.razaoSocial %></strong>
+              <% if (e.rodando) { %> <span class="tag tag-warn">capturando</span><% } %>
+              <div class="muted small">CNPJ/CPF: <%= e.cnpj %></div>
+            </td>
+            <td>
+              <% if (!e.certificado) { %>
+                <span class="tag tag-err">sem certificado</span>
+              <% } else if (e.certDias < 0) { %>
+                <span class="tag tag-err">vencido</span>
+              <% } else if (e.certDias <= 30) { %>
+                <span class="tag tag-warn">vence em <%= e.certDias %> dia(s)</span>
+              <% } else { %>
+                <span class="tag tag-ok">ok</span> <span class="muted small"><%= e.certDias %> dias</span>
+              <% } %>
+              <% if (e.certificado) { %>
+                <form method="post" action="/saude/certificado/<%= e.certificado._id %>/testar" style="margin-top: 4px;">
+                  <button class="btn btn-sm btn-ghost" title="Verifica descriptografia e validade do arquivo .pfx">Testar PFX</button>
+                </form>
+              <% } %>
             </td>
             <% ['nfe', 'nfse', 'cte'].forEach((t) => { const l = e.porTipo[t]; %>
               <td>
@@ -48,6 +78,32 @@
                 <% } else { %><span class="muted small">nunca</span><% } %>
               </td>
             <% }) %>
+            <td class="row-actions">
+              <form method="post" action="/saude/empresa/<%= e._id %>/destravar" style="display:inline-block; margin-right: 4px;">
+                <button class="btn btn-sm btn-ghost" title="Libera a trava de captura e remove o bloqueio de espera de 1h (cStat 137/656)">Destravar</button>
+              </form>
+              <details class="inline-det">
+                <summary class="btn btn-sm btn-ghost" title="Ajusta o ponteiro de NSU para resolver cStat 589">NSU: <%= e.ultimoNSU || '0' %></summary>
+                <div class="ajustes-conta" style="padding: 10px; min-width: 220px;">
+                  <div class="small muted" style="margin-bottom: 6px;">Último: <%= e.ultimoNSU || '0' %> | Max: <%= e.maxNSU || 'indefinido' %></div>
+                  <form method="post" action="/saude/empresa/<%= e._id %>/ajustar-nsu" class="form form-mini" style="margin-bottom: 4px;">
+                    <input type="hidden" name="acao" value="zerar" />
+                    <button class="btn btn-sm">Zerar NSU (recapturar)</button>
+                  </form>
+                  <% if (e.maxNSU) { %>
+                    <form method="post" action="/saude/empresa/<%= e._id %>/ajustar-nsu" class="form form-mini" style="margin-bottom: 4px;">
+                      <input type="hidden" name="acao" value="max" />
+                      <button class="btn btn-sm">Avançar para MaxNSU</button>
+                    </form>
+                  <% } %>
+                  <form method="post" action="/saude/empresa/<%= e._id %>/ajustar-nsu" class="form form-mini">
+                    <input type="hidden" name="acao" value="manual" />
+                    <input type="text" name="nsuManual" placeholder="Novo NSU numérico" style="width: 120px;" />
+                    <button class="btn btn-sm">Salvar</button>
+                  </form>
+                </div>
+              </details>
+            </td>
           </tr>
         <% }) %>
       </tbody>
@@ -58,13 +114,57 @@
 
 <div class="grid-2">
   <section class="card">
+    <div class="card-head">
+      <h2>Conexão com a SEFAZ (mTLS)</h2>
+      <form method="post" action="/saude/testar-sefaz">
+        <button class="btn btn-sm btn-primary">Testar conexão SEFAZ</button>
+      </form>
+    </div>
+    <ul class="kv">
+      <li><span class="muted">Ambiente ativo</span><span><strong><%= sistema.ambiente %></strong></span></li>
+      <li><span class="muted">Cadeia ICP-Brasil extra (.pem)</span><span><%= sistema.sefazCaFile ? 'Configurada' : 'Padrão do sistema/Node' %></span></li>
+      <li><span class="muted">Verificação TLS estrita</span><span><%= sistema.sefazTlsVerificar ? 'Ativada' : 'Desativada' %></span></li>
+    </ul>
+    <p class="muted small">O teste faz uma requisição HTTPS mTLS autenticada com certificado para o web service de Distribuição DF-e da SEFAZ e valida a resposta e a cadeia.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Retenção e armazenamento de XMLs</h2>
+      <% if (retencao.marcadasParaApagar > 0) { %>
+        <form method="post" action="/saude/retencao/cancelar-exclusao">
+          <button class="btn btn-sm btn-primary" title="Cancela o agendamento de exclusão das notas que foram baixadas">Proteger XMLs baixados</button>
+        </form>
+      <% } %>
+    </div>
+    <ul class="kv">
+      <li><span class="muted">Notas com XML completo</span><span><%= retencao.comXml.toLocaleString('pt-BR') %></span></li>
+      <li><span class="muted">Notas sem XML (resumo ou apagadas)</span><span><%= retencao.semXml.toLocaleString('pt-BR') %></span></li>
+      <li><span class="muted">Notas baixadas com exclusão pendente</span><span><strong class="<%= retencao.marcadasParaApagar > 0 ? 'text-warn' : '' %>"><%= retencao.marcadasParaApagar.toLocaleString('pt-BR') %></strong></span></li>
+    </ul>
+    <% if (plataforma) { %>
+      <div style="margin-top: 10px;">
+        <form method="post" action="/saude/retencao/limpar-agora" style="display:inline-block;">
+          <button class="btn btn-sm btn-ghost">Executar limpeza de retenção agora</button>
+        </form>
+      </div>
+    <% } %>
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="card">
     <div class="card-head"><h2>Erros nos ultimos 7 dias</h2></div>
     <% if (errosSemana.length === 0) { %>
-      <p class="muted">Nenhum erro. </p>
+      <p class="muted">Nenhum erro registrado nos últimos 7 dias.</p>
     <% } else { %>
       <ul class="log-list">
         <% errosSemana.forEach((l) => { %>
-          <li><span class="tag tag-err"><%= l.tipo.toUpperCase() %></span> <span class="muted"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= fmt(l.createdAt) %></span> <span class="log-msg"><%= l.mensagem %></span></li>
+          <li>
+            <span class="tag tag-err"><%= l.tipo.toUpperCase() %></span>
+            <span class="muted"><%= l.empresa ? l.empresa.razaoSocial : '-' %> · <%= fmt(l.createdAt) %></span>
+            <span class="log-msg"><%= l.mensagem %></span>
+          </li>
         <% }) %>
       </ul>
     <% } %>
@@ -89,32 +189,43 @@
   </section><% } %>
 </div>
 
-<section class="card">
-  <div class="card-head">
-    <h2>Alertas por e-mail</h2>
-    <% if (email.ativo) { %><form method="post" action="/saude/email-teste"><button class="btn btn-sm">Enviar e-mail de teste</button></form><% } %>
-  </div>
-  <% if (email.ativo) { %>
-    <p><span class="tag tag-ok">ativos</span> Destinatarios: <%= email.para.length ? email.para.join(', ') : 'administradores da conta' %>. <a class="link" href="/assinatura#dados">Alterar</a></p>
-    <p class="muted small">Resumo apos cada captura automatica (notas novas, canceladas, erros) e, todo dia as 07:50, certificados vencendo e prazos de manifestacao.</p>
-  <% } else { %>
-    <p><span class="tag tag-warn">desligados</span> O envio de e-mails ainda nao foi configurado no servidor.</p><% if (plataforma) { %><p>Para ligar, preencha no ambiente:</p>
-    <pre class="codigo">SMTP_HOST=smtp.gmail.com
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Alertas por e-mail</h2>
+      <% if (email.ativo) { %><form method="post" action="/saude/email-teste"><button class="btn btn-sm">Enviar e-mail de teste</button></form><% } %>
+    </div>
+    <% if (email.ativo) { %>
+      <p><span class="tag tag-ok">ativos</span> Destinatários: <%= email.para.length ? email.para.join(', ') : 'administradores da conta' %>. <a class="link" href="/assinatura#dados">Alterar</a></p>
+      <p class="muted small">Resumo após cada captura automática (notas novas, canceladas, erros) e, todo dia às 07:50, certificados vencendo e prazos de manifestação.</p>
+    <% } else { %>
+      <p><span class="tag tag-warn">desligados</span> O envio de e-mails ainda não foi configurado no servidor.</p>
+      <% if (plataforma) { %>
+        <p>Para ligar, preencha no ambiente:</p>
+        <pre class="codigo">SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USUARIO=seu-email@gmail.com
 SMTP_SENHA=senha-de-app
 SMTP_REMETENTE=Captura Total &lt;seu-email@gmail.com&gt;
 ALERTA_EMAIL_PARA=voce@empresa.com.br</pre>
-    <p class="muted small">No Gmail, use uma "senha de app" (exige verificacao em duas etapas).</p><% } %>
-  <% } %>
-</section>
+      <% } %>
+    <% } %>
+  </section>
 
-<section class="card">
-  <div class="card-head"><h2>Sistema</h2></div>
-  <ul class="kv">
-    <li><span class="muted">Ambiente SEFAZ</span><span><%= sistema.ambiente %></span></li>
-    <% if (plataforma) { %><li><span class="muted">Node.js</span><span><%= sistema.node %></span></li>
-    <li><span class="muted">Servidor</span><span><%= sistema.host %></span></li><% } %>
-    <li><span class="muted">Certificados cadastrados</span><span><%= sistema.certificadosCadastrados %></span></li>
-  </ul>
-</section>
+  <section class="card">
+    <div class="card-head">
+      <h2>Recursos e Memória</h2>
+      <% if (plataforma) { %>
+        <form method="post" action="/saude/limpar-memoria">
+          <button class="btn btn-sm btn-ghost" title="Libera memória heap não utilizada">Otimizar Memória</button>
+        </form>
+      <% } %>
+    </div>
+    <ul class="kv">
+      <li><span class="muted">Memória RSS</span><span><%= sistema.memoriaMb %> MB</span></li>
+      <li><span class="muted">Heap em uso</span><span><%= sistema.heapUsadoMb %> MB (de <%= sistema.heapTotalMb %> MB)</span></li>
+      <li><span class="muted">Node.js</span><span><%= sistema.node %></span></li>
+      <li><span class="muted">Certificados cadastrados</span><span><%= sistema.certificadosCadastrados %></span></li>
+    </ul>
+  </section>
+</div>

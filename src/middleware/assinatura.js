@@ -45,6 +45,7 @@ export async function carregarConta(req, res, next) {
     // Funcionalidades do plano (o menu esconde o que nao estiver liberado)
     res.locals.recursos = req.ehPlataforma ? TODAS_FUNCIONALIDADES : req.contaSaas.recursos();
     if (!res.locals.recursos.includes('chat_suporte') && chatLiberado(req)) res.locals.recursos = [...res.locals.recursos, 'chat_suporte'];
+    res.locals.tem = (id) => !res.locals.recursos || res.locals.recursos.includes(id);
     // Mensagens novas do formulario do site (badge no menu "Plataforma")
     if (req.ehPlataforma && req.method === 'GET') res.locals.mensagensNovas = await contarNaoLidas().catch(() => 0);
     // Chat com o suporte: mensagens nao lidas (badge no menu)

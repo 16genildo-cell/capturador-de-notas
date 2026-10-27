@@ -19,7 +19,7 @@
   <% } else { %>
     <div class="tabela-rolagem">
     <table class="table">
-      <thead><tr><th>Codigo</th><th>Descricao</th><th>NCM</th><th>CFOP</th><th>CSOSN</th><th class="dir">Preco</th><th>Vendidos</th><th></th></tr></thead>
+      <thead><tr><th>Codigo</th><th>Descricao</th><th>NCM</th><th>CFOP</th><th>CSOSN</th><th class="dir">Preco</th><th>Estoque</th><th>Vendidos</th><th></th></tr></thead>
       <tbody>
         <% produtos.forEach((p) => { %>
           <tr>
@@ -29,6 +29,12 @@
             <td class="small"><%= p.cfop %></td>
             <td class="small" title="<%= CSOSN[p.csosn] %>"><%= p.csosn %></td>
             <td class="dir nowrap">R$ <%= brl(p.preco) %> <span class="muted small">/<%= p.unidade %></span></td>
+            <td class="small nowrap">
+              <strong><%= Number(p.estoque || 0).toLocaleString('pt-BR') %></strong> <%= p.unidade %>
+              <% if (p.controlaEstoque !== false && p.estoqueMinimo > 0 && (p.estoque || 0) <= p.estoqueMinimo) { %>
+                <br><span class="tag tag-err" style="font-size:0.7rem;">baixo (min <%= p.estoqueMinimo %>)</span>
+              <% } %>
+            </td>
             <td class="small"><%= Number(p.totalVendido || 0).toLocaleString('pt-BR') %></td>
             <td class="row-actions">
               <% if (locals.ehAdmin) { %>

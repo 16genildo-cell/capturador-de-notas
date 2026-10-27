@@ -24,6 +24,10 @@ export function capturaEmAndamento(empresaId) {
   return true;
 }
 
+export function liberarTravaCaptura(empresaId) {
+  emAndamento.delete(String(empresaId));
+}
+
 /**
  * Captura os documentos de uma empresa/pessoa conforme o que esta marcado no cadastro:
  * NF-e (produtos), NFS-e (servicos) e CT-e (transporte).

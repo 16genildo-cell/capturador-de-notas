@@ -21,12 +21,12 @@ const CND_URL_PADRAO = 'https://gateway.apiserpro.serpro.gov.br/consulta-cnd/v1/
 let tokenCache = { valor: null, expira: 0 };
 
 export function serproConfigurado() {
-  return Boolean(env.serproCnd.key && env.serproCnd.secret);
+  return Boolean(env.serproCnd?.key && env.serproCnd?.secret);
 }
 
 async function obterToken() {
   if (tokenCache.valor && Date.now() < tokenCache.expira - 60_000) return tokenCache.valor;
-  const basic = Buffer.from(`${env.serproCnd.key}:${env.serproCnd.secret}`).toString('base64');
+  const basic = Buffer.from(`${env.serproCnd?.key || ''}:${env.serproCnd?.secret || ''}`).toString('base64');
   const resp = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },

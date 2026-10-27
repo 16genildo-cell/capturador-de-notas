@@ -15,6 +15,7 @@ export const env = {
   mongoUri: required('MONGODB_URI', 'mongodb://127.0.0.1:27017/captura_total'),
   sessionSecret: required('SESSION_SECRET', 'dev-secret-inseguro-troque'),
   certEncryptionKey: process.env.CERT_ENCRYPTION_KEY || '',
+  certEncryptionKeyOld: process.env.CERT_ENCRYPTION_KEY_OLD || '',
   sefazAmbiente: (process.env.SEFAZ_AMBIENTE || 'homologacao').toLowerCase(),
   isProd: process.env.NODE_ENV === 'production',
   // Arquivo .pem com a cadeia de certificados ICP-Brasil (opcional).
@@ -79,6 +80,12 @@ export const env = {
     webhookToken: (process.env.ASAAS_WEBHOOK_TOKEN || '').trim(),
     // Opcional: outra URL da API (testes automatizados)
     url: (process.env.ASAAS_URL || '').trim(),
+  },
+  // Emissao oficial de CND Federal pelo Serpro (opcional)
+  serproCnd: {
+    key: (process.env.SERPRO_CND_CONSUMER_KEY || '').trim(),
+    secret: (process.env.SERPRO_CND_CONSUMER_SECRET || '').trim(),
+    url: (process.env.SERPRO_CND_URL || '').trim(),
   },
   // Primeiro usuario (administrador) criado automaticamente se o banco estiver vazio.
   // SEED_EMAIL/SEED_SENHA sao aceitos como nomes antigos, por compatibilidade.

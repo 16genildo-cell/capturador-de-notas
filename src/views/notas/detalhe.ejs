@@ -13,6 +13,14 @@
   <a href="<%= base %>/notas/<%= nota._id %>/pdf?baixar=1" class="btn">Baixar PDF</a>
   <a href="<%= base %>/notas/<%= nota._id %>/xml" class="btn">Baixar XML</a>
   <% } %>
+  <% if (!nota.xmlApagadoEm && (nota.tipo === 'nfe' || nota.tipo === 'nfce') && !nota.resumo && locals.ehAdmin) { %>
+    <form method="post" action="<%= base %>/vendas/produtos/importar-de-nota/<%= nota._id %>" class="inline" onsubmit="return confirm('Cadastrar e atualizar os produtos desta nota no catálogo de vendas da empresa?')">
+      <button class="btn btn-secondary" title="Importa itens para o catálogo de produtos da empresa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+        Importar produtos para catálogo
+      </button>
+    </form>
+  <% } %>
 </div>
 <% if (nota.xmlApagadoEm) { %>
 <div class="flash flash-info">O arquivo desta nota foi apagado do sistema em <%= new Date(nota.xmlApagadoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>, conforme o plano do escritorio. Use o arquivo que voce baixou ou consulte a nota pela chave no portal da SEFAZ.</div>
@@ -55,6 +63,23 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
       Copiar chave
     </button>
+  </div>
+<% } %>
+
+<% if (locals.alertasAuditoria && alertasAuditoria.length) { %>
+  <div class="card" style="border-left: 4px solid #f59e0b; padding: 14px 18px; margin-bottom: 20px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-size:1.1rem;">🛡️</span>
+      <strong style="color:var(--text-heading);font-size:0.95rem;">Auditoria Fiscal Preventiva (<%= alertasAuditoria.length %> aviso(s))</strong>
+    </div>
+    <ul style="margin:0;padding-left:18px;">
+      <% alertasAuditoria.forEach(a => { %>
+        <li style="margin: 4px 0;">
+          <span class="tag <%= a.nivel === 'critico' ? 'tag-err' : 'tag-warn' %>"><%= a.titulo %></span>
+          <span class="small" style="margin-left:4px;"><%= a.mensagem %></span>
+        </li>
+      <% }) %>
+    </ul>
   </div>
 <% } %>
 <% if (nota.mensagemManifestacao) { %><div class="flash flash-info"><%= nota.mensagemManifestacao %></div><% } %>

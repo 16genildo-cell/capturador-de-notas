@@ -12,6 +12,14 @@ router.use(requireAdmin);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024, files: 500 },
+  fileFilter: (req, file, cb) => {
+    const nome = String(file.originalname || '').toLowerCase();
+    if (nome.endsWith('.xml') || nome.endsWith('.zip')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos .xml ou .zip são permitidos na importação.'));
+    }
+  },
 });
 
 router.get('/', async (req, res) => {

@@ -1,6 +1,7 @@
 import { Empresa } from '../models/Empresa.js';
 import { NotaFiscal } from '../models/NotaFiscal.js';
 import { CapturaLog } from '../models/CapturaLog.js';
+import { Certificado } from '../models/Certificado.js';
 import { resumoMensal } from './relatorios.js';
 
 /** Numeros do painel inicial de uma conta (usado pelo site e pela API). */
@@ -40,9 +41,25 @@ export async function montarPainel(owner, permitidas = null) {
     NotaFiscal.countDocuments({ owner, ...re, resumo: true, cancelada: { $ne: true } }),
   ]);
 
+  const limiteCert = new Date(Date.now() + 30 * 864e5);
+  const certsVencendo = await Certificado.find({ owner, ativo: true, validoAte: { $lt: limiteCert } })
+    .select('apelido titular cnpjCpf validoAte')
+    .sort('validoAte')
+    .lean();
+
+  const certificadosAlerta = certsVencendo.map((c) => ({
+    _id: c._id,
+    apelido: c.apelido,
+    titular: c.titular,
+    validoAte: c.validoAte,
+    vencido: new Date(c.validoAte).getTime() < Date.now(),
+    diasParaVencer: Math.ceil((new Date(c.validoAte).getTime() - Date.now()) / 864e5),
+  }));
+
   return {
     meses,
     pendencias: { manifestacao: pendentesManifestacao, resumos },
+    certificadosAlerta,
     stats: { totalEmpresas, totalNotas, valorTotal, porTipo, porTipoValor },
     ultimasNotas,
     ultimosLogs,

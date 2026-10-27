@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { User, validarSenha } from '../models/User.js';
 import { ehPlataforma } from '../middleware/assinatura.js';
 import { requireAuth } from '../middleware/auth.js';
-import { loginBloqueado, registrarFalhaLogin, limparFalhasLogin } from '../middleware/seguranca.js';
+import { loginBloqueado, loginBloqueadoAsync, registrarFalhaLogin, limparFalhasLogin } from '../middleware/seguranca.js';
 import { env } from '../config/env.js';
 import { TESTE } from '../config/planos.js';
 import { emailConfigurado } from '../services/email.js';
@@ -19,7 +19,7 @@ router.post('/login', async (req, res) => {
   const email = String(req.body.email || '').toLowerCase().trim();
   const senha = String(req.body.senha || '');
 
-  const minutos = loginBloqueado(req, email);
+  const minutos = await loginBloqueadoAsync(req, email);
   if (minutos) {
     req.session.flash = { type: 'erro', msg: `Muitas tentativas. Tente novamente em ${minutos} minuto(s).` };
     return res.redirect('/login');

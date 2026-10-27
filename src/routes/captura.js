@@ -57,7 +57,8 @@ router.get('/', async (req, res) => {
     ultimoLogCte: logs.find((l) => l.empresa && String(l.empresa._id) === String(e._id) && l.tipo === 'cte'),
   });
   res.render('captura', {
-    title: 'Captura',
+    title: 'Central de Captura SEFAZ',
+    subtitulo: 'Sincronize e capture novos documentos da SEFAZ com certificado digital A1',
     clienteSel: clienteSel ? comStatus(clienteSel) : null,
     opcoesClientes: empresas.map((e) => ({ _id: e._id, razaoSocial: e.razaoSocial, doc: formatarDocumento(e.cnpj) })),
     totalClientes: empresas.length,
@@ -101,6 +102,33 @@ router.post('/todas', async (req, res) => {
       (erros > 0 ? `, ${erros} com erro (veja o histórico abaixo).` : '.'),
   };
   res.redirect('/captura#notas-capturadas');
+});
+
+// Captura individual de uma empresa via /captura/:empresaId
+router.post('/:empresaId', async (req, res) => {
+  try {
+    const empresa = await Empresa.findOne({ _id: req.params.empresaId, owner: req.conta, ...restricaoEmpresas(req, '_id') });
+    if (!empresa) throw new Error('Empresa não encontrada.');
+    const r = await capturarEmpresa(empresa._id, { origem: 'manual' });
+    const novos = (r.nfe?.novos || 0) + (r.nfse?.novos || 0) + (r.cte?.novos || 0);
+    const houveErro = [r.nfe, r.nfse, r.cte].some((x) => x?.status === 'erro');
+    req.session.flash = {
+      type: houveErro ? 'erro' : novos > 0 ? 'ok' : 'info',
+      msg:
+        `Captura concluída para ${empresa.razaoSocial}. ` +
+        [
+          r.nfe && `NF-e: ${r.nfe.mensagem}`,
+          r.nfse && `NFS-e: ${r.nfse.mensagem}`,
+          r.cte && `CT-e: ${r.cte.mensagem}`,
+        ]
+          .filter(Boolean)
+          .join(' | '),
+    };
+  } catch (err) {
+    req.session.flash = { type: 'erro', msg: `Erro na captura: ${err.message}` };
+  }
+  const voltar = req.get('referer') || '/captura';
+  res.redirect(voltar);
 });
 
 export default router;

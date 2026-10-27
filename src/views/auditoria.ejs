@@ -1,0 +1,90 @@
+<div class="page-actions row-actions">
+  <a href="<%= base %>/relatorios" class="btn btn-ghost">Voltar aos Relatórios</a>
+  <% if (empresas.length > 1 && !locals.empresaAtual) { %>
+    <nav class="chips">
+      <% empresas.forEach((e) => { %>
+        <a href="<%= base %>/relatorios/auditoria?empresa=<%= e._id %>" class="chip <%= empresaSel && String(e._id) === String(empresaSel._id) ? 'active' : '' %>"><%= e.razaoSocial %></a>
+      <% }) %>
+    </nav>
+  <% } %>
+</div>
+
+<% if (!empresaSel) { %>
+  <div class="card"><p class="muted">Selecione uma empresa para auditar.</p></div>
+<% } else { %>
+  <section class="card">
+    <div class="card-head">
+      <h2>Auditoria Fiscal Preventiva · <%= empresaSel.razaoSocial %></h2>
+      <span class="tag <%= resultado.score >= 90 ? 'tag-ok' : resultado.score >= 70 ? 'tag-warn' : 'tag-err' %>">Score: <%= resultado.score %>/100 · <%= resultado.nivel %></span>
+    </div>
+    <p class="muted small">Varredura automática em busca de notas canceladas indevidamente computadas, riscos de perda de crédito de ST (Substituição Tributária) e prazos de manifestação na SEFAZ.</p>
+  </section>
+
+  <section class="cards totais">
+    <div class="card stat">
+      <span class="stat-label">Notas Auditadas</span>
+      <span class="stat-value"><%= resultado.totalAuditadas %></span>
+    </div>
+    <div class="card stat">
+      <span class="stat-label">Alertas Críticos</span>
+      <span class="stat-value" style="color: #ef4444;"><%= resultado.criticos %></span>
+    </div>
+    <div class="card stat">
+      <span class="stat-label">Inconsistências / Avisos</span>
+      <span class="stat-value" style="color: #f59e0b;"><%= resultado.alertasCount %></span>
+    </div>
+    <div class="card stat">
+      <span class="stat-label">Conformidade Estimada</span>
+      <span class="stat-value" style="color: <%= resultado.score >= 80 ? '#22c55e' : '#eab308' %>;"><%= resultado.score %>%</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Ocorrências Identificadas (<%= resultado.totalOcorrencias %>)</h2>
+    </div>
+    <% if (!resultado.ocorrencias.length) { %>
+      <div class="flash flash-ok" style="margin-top:10px;">
+        <strong>Tudo em ordem!</strong> Nenhuma inconsistência fiscal ou nota cancelada pendente encontrada para esta empresa.
+      </div>
+    <% } else { %>
+      <div class="tabela-rolagem">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Documento</th>
+              <th>Emissão</th>
+              <th>Papel</th>
+              <th class="dir">Valor</th>
+              <th>Alertas e Recomendações</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% resultado.ocorrencias.forEach((oc) => { %>
+              <tr>
+                <td><strong>NF <%= oc.numero %>/<%= oc.serie %></strong><div class="mono small muted"><%= (oc.chave || '').replace(/(\d{4})(?=\d)/g, '$1 ') %></div></td>
+                <td class="small nowrap"><%= oc.dataEmissao ? new Date(oc.dataEmissao).toLocaleDateString('pt-BR') : '-' %></td>
+                <td><span class="tag"><%= oc.papel === 'destinatario' ? 'Entrada' : 'Saída' %></span></td>
+                <td class="dir nowrap">R$ <%= Number(oc.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                <td>
+                  <ul style="margin:0;padding-left:14px;">
+                    <% oc.alertas.forEach((a) => { %>
+                      <li style="margin:2px 0;">
+                        <span class="tag <%= a.nivel === 'critico' ? 'tag-err' : 'tag-warn' %>"><%= a.titulo %></span>
+                        <span class="small"><%= a.mensagem %></span>
+                      </li>
+                    <% }) %>
+                  </ul>
+                </td>
+                <td class="row-actions">
+                  <a href="<%= base %>/notas/<%= oc.notaId %>" class="btn btn-sm btn-ghost">Abrir</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>

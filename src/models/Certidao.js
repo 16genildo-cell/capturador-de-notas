@@ -30,7 +30,7 @@ const certidaoSchema = new mongoose.Schema(
     dataEmissao: { type: Date },
     dataValidade: { type: Date, index: true },
     pdf: { type: Buffer }, // arquivo da certidao
-    origem: { type: String, enum: ['serpro', 'manual'], default: 'manual' },
+    origem: { type: String, enum: ['serpro', 'manual', 'gratuita'], default: 'manual' },
     mensagem: { type: String }, // retorno do orgao (ex.: motivo de nao emissao)
   },
   { timestamps: true },

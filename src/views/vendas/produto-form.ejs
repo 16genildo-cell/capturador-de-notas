@@ -12,6 +12,14 @@
       <label>Preco de venda (R$) * <input type="text" name="preco" value="<%= preco %>" inputmode="decimal" required /></label>
       <label>Unidade <input type="text" name="unidade" value="<%= p.unidade || 'UN' %>" maxlength="6" placeholder="UN, KG, CX, PC..." /></label>
     </div>
+    <div class="form-row">
+      <label>Estoque atual
+        <input type="text" name="estoque" value="<%= typeof p.estoque === 'number' ? String(p.estoque).replace('.', ',') : (p.estoque || '0') %>" inputmode="decimal" placeholder="0" />
+      </label>
+      <label>Estoque mínimo (alerta)
+        <input type="text" name="estoqueMinimo" value="<%= typeof p.estoqueMinimo === 'number' ? String(p.estoqueMinimo).replace('.', ',') : (p.estoqueMinimo || '0') %>" inputmode="decimal" placeholder="0" />
+      </label>
+    </div>
     <label>Situacao
       <select name="ativo"><option value="on">Ativo (aparece na venda)</option><option value="off" <%= p.ativo === false ? 'selected' : '' %>>Inativo</option></select>
     </label>

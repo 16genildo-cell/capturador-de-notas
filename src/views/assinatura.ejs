@@ -50,13 +50,45 @@
 <% } %>
 
 <section class="card" id="planos">
-  <div class="card-head"><h2>Contratar ou mudar de plano</h2></div>
-  <p class="muted">A contratacao, a troca de plano e o cancelamento sao feitos com a nossa equipe.<%= planoAtual ? ` Seu plano atual e o ${planoAtual.nome} (${planoAtual.empresas == null ? 'clientes ilimitados' : `ate ${planoAtual.empresas} clientes`}).` : '' %></p>
-  <% if (emailSuporte) { %>
-    <a class="btn btn-primary" href="mailto:<%= emailSuporte %>?subject=<%= encodeURIComponent('Plano do escritorio ' + conta.nome) %>">Falar com a equipe</a>
-    <span class="muted small" style="margin-left:8px"><%= emailSuporte %></span>
-  <% } else { %>
-    <p class="muted small">Fale com o suporte para contratar.</p>
+  <div class="card-head">
+    <h2>Pacotes e Planos disponíveis</h2>
+    <% if (emailSuporte) { %>
+      <a class="btn btn-sm btn-primary" href="mailto:<%= emailSuporte %>?subject=<%= encodeURIComponent('Plano do escritório ' + conta.nome) %>">Falar com a equipe</a>
+    <% } %>
+  </div>
+  <p class="muted">A contratação, a troca de plano e o cancelamento são feitos com a nossa equipe.<%= planoAtual ? ` Seu plano atual é o ${planoAtual.nome} (${planoAtual.empresas == null ? 'clientes ilimitados' : `até ${planoAtual.empresas} clientes`}).` : '' %></p>
+
+  <% const listaDisponivel = (planos || []).filter(p => p.ativo && p.publico); %>
+  <% if (listaDisponivel.length) { %>
+    <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 16px;">
+      <% listaDisponivel.forEach(p => { 
+          const eAtual = planoAtual && planoAtual.id === p.id;
+      %>
+        <div class="card" style="border: 2px solid <%= eAtual ? 'var(--primary, #3b82f6)' : (p.destaque ? '#f59e0b' : 'var(--border, #e5e7eb)') %>; position:relative; display:flex; flex-direction:column; justify-content:space-between; padding:16px;">
+          <% if (eAtual) { %><span class="tag tag-ok" style="position:absolute; top:12px; right:12px;">Plano atual</span><% } else if (p.destaque) { %><span class="tag tag-warn" style="position:absolute; top:12px; right:12px;">Destaque</span><% } %>
+          <div>
+            <h3 style="margin-top:0"><%= p.nome %></h3>
+            <div style="font-size:1.4rem; font-weight:700; margin:6px 0;">
+              <%= brl(p.preco) %> <span style="font-size:0.85rem; font-weight:normal; color:var(--muted);"><%= p.rotuloPeriodo.toLowerCase() %></span>
+            </div>
+            <% if (p.descricao) { %><p class="small muted" style="margin-bottom:12px;"><%= p.descricao %></p><% } %>
+            <ul style="list-style:none; padding:0; margin:10px 0; font-size:0.85rem; display:flex; flex-direction:column; gap:6px;">
+              <li>✓ <strong><%= p.empresas == null ? 'Clientes/CNPJs ilimitados' : 'Até ' + p.empresas + ' clientes' %></strong></li>
+              <li>✓ <%= p.usuarios == null ? 'Equipe ilimitada' : 'Até ' + p.usuarios + ' usuário(s)' %></li>
+              <li>✓ <%= p.rotuloArmazenamento %></li>
+              <li>✓ <%= p.funcionalidades.length %> funcionalidades</li>
+            </ul>
+          </div>
+          <div style="margin-top:14px;">
+            <% if (eAtual) { %>
+              <button class="btn btn-sm btn-ghost" disabled style="width:100%">Seu plano atual</button>
+            <% } else if (emailSuporte) { %>
+              <a class="btn btn-sm btn-primary" href="mailto:<%= emailSuporte %>?subject=<%= encodeURIComponent('Quero contratar o pacote ' + p.nome + ' - Escritório ' + conta.nome) %>" style="width:100%; text-align:center; display:block;">Quero este plano</a>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
   <% } %>
 </section>
 

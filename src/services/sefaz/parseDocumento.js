@@ -8,10 +8,26 @@ const parser = new XMLParser({
   // numeros longos que, convertidos para Number, perderiam precisao.
   parseTagValue: false,
   parseAttributeValue: false,
+  // Seguranca: desabilita resolucao de entidades externas e entidades HTML
+  processEntities: false,
+  htmlEntities: false,
 });
+
+/**
+ * Validação de segurança anti-XXE e XML Bomb:
+ * Garante que o XML não contém declarações DTD (DOCTYPE) ou de entidades externas (ENTITY),
+ * as quais nunca são utilizadas em documentos fiscais DF-e legítimos da SEFAZ.
+ */
+export function validarXmlSeguro(xml) {
+  if (typeof xml !== 'string') return;
+  if (/<!ENTITY/i.test(xml) || /<!DOCTYPE/i.test(xml)) {
+    throw new Error('XML inválido ou inseguro: declarações DTD/ENTITY não são permitidas.');
+  }
+}
 
 /** Converte um XML (string) em objeto JS. */
 export function xmlToObj(xml) {
+  validarXmlSeguro(xml);
   return parser.parse(xml);
 }
 

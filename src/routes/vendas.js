@@ -5,7 +5,11 @@ import { escopo, escopoDaEmpresa, restricaoEmpresas } from '../middleware/escopo
 import { Empresa } from '../models/Empresa.js';
 import { EmissaoNfe } from '../models/EmissaoNfe.js';
 import { ProdutoNfe } from '../models/ProdutoNfe.js';
-import { emitirNfe, cancelarNfe, cartaCorrecao, reconsultarNfe, statusServico } from '../services/nfe/emissao.js';
+import { MovimentacaoEstoque } from '../models/MovimentacaoEstoque.js';
+import { NotaFiscal } from '../models/NotaFiscal.js';
+import { xmlToObj } from '../services/sefaz/parseDocumento.js';
+import { enviarEmail } from '../services/email.js';
+import { emitirNfe, cancelarNfe, cartaCorrecao, reconsultarNfe, statusServico, sincronizarContingencias } from '../services/nfe/emissao.js';
 import { FORMAS_PAGAMENTO, CSOSN, PRESENCA, numeroBr } from '../services/nfe/xml.js';
 import { gerarDanfe } from '../services/pdf/danfe.js';
 import { gerarDanfeNfce } from '../services/pdf/danfeNfce.js';
@@ -89,6 +93,8 @@ function entradaDoFormulario(b) {
     presenca: b.presenca,
     consumidorFinal: b.consumidorFinal === 'on',
     infComplementar: b.infComplementar,
+    contingencia: b.contingencia === 'on' || b.contingencia === '1' || b.contingencia === true,
+    xJustCont: b.xJustCont,
   };
 }
 
@@ -124,6 +130,19 @@ router.get('/', async (req, res) => {
     modelo: form?.modelo || (req.query.modelo === '55' ? '55' : '65'),
     ...CONSTANTES,
   });
+});
+
+// Status do web service da SEFAZ em tempo real
+router.get('/status-sefaz', async (req, res) => {
+  try {
+    const { empresa: empresaId, modelo = '65' } = req.query;
+    const empresa = await empresaDaConta(req, empresaId);
+    if (!empresa) return res.json({ ok: false, xMotivo: 'Empresa não encontrada ou não informada.' });
+    const r = await statusServico(empresa._id, modelo === '55' ? '55' : '65');
+    res.json(r);
+  } catch (err) {
+    res.json({ ok: false, xMotivo: err.message });
+  }
 });
 
 router.post('/', async (req, res) => {
@@ -249,6 +268,8 @@ router.get('/produtos', async (req, res) => {
 function produtoDoFormulario(b) {
   const preco = numeroBr(b.preco);
   const pTotTrib = numeroBr(b.pTotTrib) || 0;
+  const estoque = numeroBr(b.estoque) || 0;
+  const estoqueMinimo = numeroBr(b.estoqueMinimo) || 0;
   return {
     codigo: String(b.codigo || '').trim(),
     descricao: String(b.descricao || '').trim(),
@@ -257,6 +278,9 @@ function produtoDoFormulario(b) {
     cest: soDigitos(b.cest),
     unidade: String(b.unidade || 'UN').trim().toUpperCase() || 'UN',
     preco,
+    estoque,
+    estoqueMinimo,
+    controlaEstoque: b.controlaEstoque !== 'off',
     cfop: soDigitos(b.cfop) || '5102',
     origem: ORIGENS[b.origem] ? String(b.origem) : '0',
     csosn: CSOSN[b.csosn] ? String(b.csosn) : '102',
@@ -335,11 +359,107 @@ router.post('/produtos/:id/excluir', requireAdmin, async (req, res) => {
   res.redirect(req.base ? `${req.base}/vendas/produtos` : `/vendas/produtos${p ? `?empresa=${p.empresa}` : ''}`);
 });
 
+// Importação automática de produtos para o catálogo a partir de nota fiscal de entrada
+router.post('/produtos/importar-de-nota/:notaId', requireAdmin, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.notaId)) throw new Error('Nota fiscal inválida.');
+    const nota = await NotaFiscal.findOne({ _id: req.params.notaId, owner: req.conta, ...escopo(req) });
+    if (!nota) throw new Error('Nota fiscal não encontrada.');
+    if (!nota.xml) throw new Error('O XML desta nota não está disponível no sistema.');
+
+    const obj = xmlToObj(nota.xml);
+    const nfe = obj?.nfeProc?.NFe || obj?.NFe;
+    if (!nfe) throw new Error('Não foi possível ler a estrutura da NF-e no XML.');
+
+    const dets = nfe.infNFe?.det;
+    const listaDets = Array.isArray(dets) ? dets : (dets ? [dets] : []);
+    if (!listaDets.length) throw new Error('Nenhum produto/item encontrado no XML desta nota.');
+
+    let importados = 0;
+    for (const item of listaDets) {
+      const prod = item.prod || {};
+      const codigo = String(prod.cProd || '').trim();
+      const descricao = String(prod.xProd || '').trim();
+      if (!codigo || !descricao) continue;
+
+      const gtin = prod.cEAN && prod.cEAN !== 'SEM GTIN' ? soDigitos(prod.cEAN) : '';
+      const ncm = soDigitos(prod.NCM || '').slice(0, 8);
+      const cest = soDigitos(prod.CEST || '').slice(0, 7);
+      const unidade = String(prod.uCom || 'UN').trim().toUpperCase().slice(0, 6) || 'UN';
+      let preco = Number(prod.vUnCom || 0);
+      if (Number.isNaN(preco) || preco <= 0) preco = 1.0;
+
+      // Se CFOP de entrada começar com 14, 24, 54 ou 64, sugere revenda ST (CFOP 5405 e CSOSN 500)
+      const cfopOrig = String(prod.CFOP || '');
+      const temSt = cfopOrig.startsWith('140') || cfopOrig.startsWith('240') || cfopOrig.startsWith('540') || cfopOrig.startsWith('640');
+      const cfop = temSt ? '5405' : '5102';
+      const csosn = temSt ? '500' : '102';
+
+      // Origem do ICMS
+      const icms = item.imposto?.ICMS || {};
+      const icmsDetalhe = Object.values(icms)[0] || {};
+      const orig = String(icmsDetalhe.orig ?? '0');
+      const origem = ORIGENS[orig] ? orig : '0';
+      const qtdEntrada = Math.max(0, Number(prod.qCom || 0));
+
+      const prodAtualizado = await ProdutoNfe.findOneAndUpdate(
+        { owner: req.conta, empresa: nota.empresa, codigo },
+        {
+          $set: {
+            descricao,
+            gtin: [8, 12, 13, 14].includes(gtin.length) ? gtin : '',
+            ncm: ncm.length === 8 ? ncm : '00000000',
+            cest: cest.length === 7 ? cest : '',
+            unidade,
+            preco,
+            cfop,
+            csosn,
+            origem,
+            pTotTrib: 0,
+            ativo: true,
+          },
+          $inc: { estoque: qtdEntrada },
+        },
+        { upsert: true, new: true },
+      );
+
+      if (qtdEntrada > 0) {
+        await MovimentacaoEstoque.create({
+          owner: req.conta,
+          empresa: nota.empresa,
+          produto: prodAtualizado._id,
+          tipo: 'entrada',
+          quantidade: qtdEntrada,
+          estoqueAnterior: Math.round(((prodAtualizado.estoque || 0) - qtdEntrada) * 10000) / 10000,
+          estoqueFinal: prodAtualizado.estoque,
+          origem: 'xml_entrada',
+          referenciaId: nota._id,
+          documentoNumero: `${nota.numero || ''}/${nota.serie || ''}`,
+          motivo: `Importação XML nota fornecedor ${nota.numero || ''}`,
+        }).catch(() => {});
+      }
+      importados += 1;
+    }
+
+    req.session.flash = {
+      type: 'ok',
+      msg: `${importados} produto(s) importado(s) com sucesso para o catálogo (estoques atualizados com os itens da nota)!`,
+    };
+    res.redirect(`${req.base}/vendas/produtos?empresa=${nota.empresa}`);
+  } catch (err) {
+    req.session.flash = { type: 'erro', msg: err.message };
+    res.redirect(req.get('referer') || `${req.base}/notas/${req.params.notaId}`);
+  }
+});
+
 // ------------------------------------------------------------------ emissao (detalhe e eventos)
 
 async function carregarEmissao(req) {
   if (!mongoose.isValidObjectId(req.params.id)) return null;
-  return EmissaoNfe.findOne({ _id: req.params.id, owner: req.conta, ...escopo(req) }).populate('empresa', 'razaoSocial cnpj uf').lean();
+  return EmissaoNfe.findOne({ _id: req.params.id, owner: req.conta, ...escopo(req) })
+    .populate('empresa', 'razaoSocial cnpj uf')
+    .populate('usuario', 'nome email role')
+    .lean();
 }
 
 router.get('/:id', async (req, res, next) => {
@@ -380,6 +500,66 @@ router.get('/:id/xml', async (req, res) => {
   res.send(xml);
 });
 
+router.post('/:id/enviar-email', async (req, res) => {
+  try {
+    const e = await carregarEmissao(req);
+    if (!e) return res.status(404).send('Nota não encontrada.');
+    if (!['autorizada', 'cancelada'].includes(e.status)) {
+      throw new Error('Apenas notas autorizadas ou canceladas podem ser enviadas por e-mail.');
+    }
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      throw new Error('Informe um endereço de e-mail válido.');
+    }
+
+    const cancelada = e.status === 'cancelada';
+    const pdf = e.modelo === '65' ? await gerarDanfeNfce(e.xml, { cancelada }) : await gerarDanfe(e.xml, { cancelada });
+    const nomeDoc = e.modelo === '65' ? 'Cupom Fiscal (NFC-e)' : 'Nota Fiscal (NF-e)';
+    const empresaNome = e.empresa?.razaoSocial || 'Empresa';
+
+    const enviado = await enviarEmail({
+      para: email,
+      assunto: `${nomeDoc} nº ${e.numero} - ${empresaNome}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b;">
+          <h2 style="color: #2563eb; margin-bottom: 12px;">${nomeDoc} Emitida</h2>
+          <p>Olá,</p>
+          <p>Segue em anexo o documento fiscal da sua compra na empresa <strong>${empresaNome}</strong>.</p>
+          <div style="background: #f1f5f9; padding: 12px 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 4px 0;"><strong>Documento:</strong> ${nomeDoc} nº ${e.numero} · Série ${e.serie}</p>
+            <p style="margin: 4px 0;"><strong>Valor Total:</strong> R$ ${Number(e.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p style="margin: 4px 0;"><strong>Chave de Acesso:</strong> <span style="font-family: monospace;">${(e.chave || '').replace(/(\d{4})(?=\d)/g, '$1 ')}</span></p>
+            ${e.protocolo ? `<p style="margin: 4px 0;"><strong>Protocolo SEFAZ:</strong> ${e.protocolo}</p>` : ''}
+          </div>
+          <p style="color: #64748b; font-size: 13px;">O DANFE em PDF e o arquivo XML oficial estão anexados a esta mensagem.</p>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `${e.modelo === '65' ? 'NFCe' : 'NFe'}_${e.chave}.pdf`,
+          content: pdf,
+        },
+        {
+          filename: `${e.chave}.xml`,
+          content: e.xml,
+        },
+      ],
+    });
+
+    if (enviado) {
+      req.session.flash = { type: 'ok', msg: `Comprovante enviado com sucesso para ${email}.` };
+    } else {
+      req.session.flash = {
+        type: 'info',
+        msg: `Serviço de e-mail (SMTP) não configurado no servidor. Configure as variáveis SMTP no .env para o envio real.`,
+      };
+    }
+  } catch (err) {
+    req.session.flash = { type: 'erro', msg: err.message };
+  }
+  res.redirect(`${req.base}/vendas/${req.params.id}`);
+});
+
 router.post('/:id/cancelar', requireAdmin, async (req, res) => {
   try {
     const r = await cancelarNfe(req.params.id, req.conta, { justificativa: req.body.justificativa }, escopo(req));
@@ -408,6 +588,85 @@ router.post('/:id/reconsultar', async (req, res) => {
     req.session.flash = { type: 'erro', msg: err.message };
   }
   res.redirect(`${req.base}/vendas/${req.params.id}`);
+});
+
+// Sincroniza todas as notas emitidas em contingência offline
+router.post('/sincronizar-contingencias', async (req, res) => {
+  try {
+    const empresaId = req.body.empresa || req.query.empresa;
+    const empresa = await empresaDaConta(req, empresaId);
+    if (!empresa) throw new Error('Selecione uma empresa válida.');
+    const r = await sincronizarContingencias(empresa._id, req.conta);
+    req.session.flash = {
+      type: r.sincronizadas > 0 ? 'ok' : r.total === 0 ? 'info' : 'erro',
+      msg: `${r.sincronizadas} de ${r.total} nota(s) em contingência transmitida(s) para a SEFAZ.` + (r.erros.length ? ` Detalhes: ${r.erros.slice(0, 3).join(' | ')}` : ''),
+    };
+    res.redirect(`${req.base}/vendas?empresa=${empresa._id}`);
+  } catch (err) {
+    req.session.flash = { type: 'erro', msg: err.message };
+    res.redirect(`${req.base}/vendas`);
+  }
+});
+
+// Visualização térmica direta para impressora de 80mm/58mm
+router.get('/:id/cupom-termico', async (req, res, next) => {
+  try {
+    const e = await carregarEmissao(req);
+    if (!e) return res.status(404).send('Nota não encontrada.');
+    const nome = e.modelo === '65' ? 'NFC-e' : 'NF-e';
+    res.render('vendas/cupom-termico', { layout: false, emissao: e, nome, ...CONSTANTES });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Arquivo binário ESC/POS para envio direto à porta serial/USB da impressora
+router.get('/:id/escpos', async (req, res, next) => {
+  try {
+    const e = await carregarEmissao(req);
+    if (!e) return res.status(404).send('Nota não encontrada.');
+    const init = Buffer.from([0x1b, 0x40]); // ESC @
+    const center = Buffer.from([0x1b, 0x61, 0x01]);
+    const left = Buffer.from([0x1b, 0x61, 0x00]);
+    const boldOn = Buffer.from([0x1b, 0x45, 0x01]);
+    const boldOff = Buffer.from([0x1b, 0x45, 0x00]);
+    const cut = Buffer.from([0x1d, 0x56, 0x00]); // GS V 0
+
+    const empresaNome = (e.empresa?.razaoSocial || 'EMPRESA').slice(0, 40) + '\n';
+    const cnpj = `CNPJ: ${e.empresa?.cnpj || ''}\n`;
+    const tit = `DOCUMENTO AUXILIAR DE NFC-e\nNumero: ${e.numero} Serie: ${e.serie}\n`;
+    const separador = '------------------------------------------------\n';
+    const total = `TOTAL R$ ${Number(e.valor || 0).toFixed(2)}\n`;
+    const chave = `Chave:\n${(e.chave || '').replace(/(\d{4})(?=\d)/g, '$1 ')}\n`;
+    const rodape = e.status === 'contingencia' ? 'EMITIDA EM CONTINGENCIA OFFLINE\n' : `Protocolo: ${e.protocolo || '-'}\n`;
+
+    const buf = Buffer.concat([
+      init,
+      center,
+      boldOn,
+      Buffer.from(empresaNome, 'latin1'),
+      boldOff,
+      Buffer.from(cnpj, 'latin1'),
+      Buffer.from(tit, 'latin1'),
+      Buffer.from(separador, 'latin1'),
+      left,
+      boldOn,
+      Buffer.from(total, 'latin1'),
+      boldOff,
+      Buffer.from(separador, 'latin1'),
+      center,
+      Buffer.from(chave, 'latin1'),
+      Buffer.from(rodape, 'latin1'),
+      Buffer.from('\n\n\n', 'latin1'),
+      cut,
+    ]);
+
+    res.type('application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="cupom_${e.numero || 'nfe'}.bin"`);
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

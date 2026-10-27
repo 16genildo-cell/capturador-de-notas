@@ -10,6 +10,7 @@ import { codigoUF } from '../sefaz/endpoints.js';
 import { obterCertificadoEmpresa, salvarDocumento } from '../sefaz/distribuicaoDFe.js';
 import { dataHoraBrasilia } from '../nfse/emissao.js';
 import { soDigitos } from '../../utils/documento.js';
+import { abaterEstoqueVenda, estornarEstoqueVenda } from '../estoqueService.js';
 import {
   NS, VERSAO, validarVenda, montarNFe, assinarNFe, montarQrCode, incluirQrCode, webservices, textoSefaz, esc,
 } from './xml.js';
@@ -263,6 +264,15 @@ export async function emitirNfe(empresaId, entrada, { usuarioId } = {}) {
       dados: { ...entrada, itens: (entrada.itens || []).map(({ produtoId, quantidade, valorUnitario, desconto }) => ({ produtoId, quantidade, valorUnitario, desconto })) },
     });
 
+    if (venda.contingencia) {
+      registro.status = 'contingencia';
+      registro.xMotivo = 'Emitida em contingência offline. Pendente de transmissão para a SEFAZ.';
+      await registro.save();
+      await avancarNumeracao(empresa, ambiente, modelo, numero);
+      await abaterEstoqueVenda(registro);
+      return registro;
+    }
+
     let r;
     try {
       r = await autorizar({ ws, nfeAssinada, ambiente, certificado });
@@ -304,6 +314,7 @@ export async function emitirNfe(empresaId, entrada, { usuarioId } = {}) {
       await Promise.all(
         venda.itens.map((it) => (it.produtoId ? ProdutoNfe.updateOne({ _id: it.produtoId }, { $inc: { totalVendido: it.quantidade } }) : null)),
       );
+      await abaterEstoqueVenda(registro);
     } else if (DENEGADA.includes(prot.cStat)) {
       registro.set({ status: 'denegada', protocolo: prot.protocolo, dataAutorizacao: prot.dhRecbto, xml: protXml ? montarNfeProc(nfeAssinada, protXml) : nfeAssinada });
       await avancarNumeracao(empresa, ambiente, modelo, numero); // numero denegado nao pode ser reutilizado
@@ -402,6 +413,7 @@ export async function cancelarNfe(emissaoId, owner, { justificativa }, filtroExt
   if (r.ok) {
     emissao.status = 'cancelada';
     if (emissao.ambiente === 'producao') await NotaFiscal.updateOne({ empresa: empresa._id, chave: emissao.chave }, { cancelada: true });
+    await estornarEstoqueVenda(emissao, 'Cancelamento de nota na SEFAZ');
   }
   await emissao.save();
   return { ok: r.ok, mensagem: r.ok ? 'Nota cancelada na SEFAZ.' : `SEFAZ recusou o cancelamento: ${r.cStat} - ${r.xMotivo}` };
@@ -445,4 +457,50 @@ export async function reconsultarNfe(emissaoId, owner, filtroExtra = {}) {
     return { ok: true, mensagem: 'A SEFAZ confirmou: nota autorizada.' };
   }
   return { ok: false, mensagem: `SEFAZ: ${c.cStat} - ${c.xMotivo}` };
+}
+
+/**
+ * Transmite para a SEFAZ todas as notas que foram emitidas em contingência offline (tpEmis 9).
+ */
+export async function sincronizarContingencias(empresaId, owner) {
+  const pendentes = await EmissaoNfe.find({ empresa: empresaId, owner, status: 'contingencia' });
+  if (!pendentes.length) return { total: 0, sincronizadas: 0, erros: [] };
+
+  const empresa = await Empresa.findById(empresaId).populate('certificado');
+  if (!empresa) throw new Error('Empresa não encontrada.');
+  const certificado = await obterCertificadoEmpresa(empresa);
+
+  let sincronizadas = 0;
+  const erros = [];
+
+  for (const nota of pendentes) {
+    try {
+      const ws = webservices(empresa.uf, nota.modelo, nota.ambiente);
+      const r = await autorizar({ ws, nfeAssinada: nota.xml, ambiente: nota.ambiente, certificado });
+      const prot = r.prot;
+      if (prot && AUTORIZADA.includes(prot.cStat)) {
+        const nfeProc = montarNfeProc(nota.xml, r.protXml);
+        nota.set({
+          status: 'autorizada',
+          protocolo: prot.protocolo,
+          dataAutorizacao: prot.dhRecbto || new Date(),
+          cStat: prot.cStat,
+          xMotivo: prot.xMotivo,
+          xml: nfeProc,
+        });
+        nota.nota = await gravarNota(empresa, nota.ambiente, nfeProc, nota.chave);
+        await nota.save();
+        sincronizadas += 1;
+      } else if (prot && DENEGADA.includes(prot.cStat)) {
+        nota.set({ status: 'denegada', cStat: prot.cStat, xMotivo: prot.xMotivo });
+        await nota.save();
+      } else {
+        erros.push(`Nota ${nota.numero}: ${prot?.xMotivo || 'Não autorizada'}`);
+      }
+    } catch (err) {
+      erros.push(`Nota ${nota.numero}: ${err.message}`);
+    }
+  }
+
+  return { total: pendentes.length, sincronizadas, erros };
 }

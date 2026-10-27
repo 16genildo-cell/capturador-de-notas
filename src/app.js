@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 
 import { env } from './config/env.js';
 import { attachUser } from './middleware/auth.js';
-import { cabecalhosSeguranca, protecaoCsrf } from './middleware/seguranca.js';
+import { cabecalhosSeguranca, protecaoCsrf, sanitizarNoSql } from './middleware/seguranca.js';
 import usuarioRoutes from './routes/usuarios.js';
 import saudeRoutes from './routes/saude.js';
 import importarRoutes from './routes/importar.js';
@@ -18,6 +18,12 @@ import relatorioRoutes from './routes/relatorios.js';
 import { alertaCertificados } from './middleware/alertas.js';
 import { escopoEmpresa, semEscopo, menuEmpresas } from './middleware/escopoEmpresa.js';
 import empresaPainelRoutes from './routes/empresaPainel.js';
+import vendasRoutes from './routes/vendas.js';
+import emitirRoutes from './routes/emitir.js';
+import servicoNfseRoutes from './routes/servicosNfse.js';
+import solicitacaoRoutes from './routes/solicitacoes.js';
+import certidaoRoutes from './routes/certidoes.js';
+import capturaRoutes from './routes/captura.js';
 
 import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
@@ -59,12 +65,18 @@ export function createApp() {
   app.use(cabecalhosSeguranca);
   app.use(protecaoCsrf);
 
-  // Estaticos
+  // Estaticos e PWA
+  app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.json')));
+  app.get('/sw.js', (req, res) => {
+    res.type('application/javascript');
+    res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+  });
   app.use('/static', express.static(path.join(__dirname, 'public')));
 
-  // Body parsing
+  // Body parsing e sanitização contra NoSQL injection
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(express.json({ limit: '1mb' }));
+  app.use(sanitizarNoSql);
 
   // Webhooks (Asaas): sem sessao, autenticados por token
   app.use('/webhooks', webhookRoutes);
@@ -111,6 +123,7 @@ export function createApp() {
     res.locals.queryAtual = req.query;
     res.locals.sefazAmbiente = env.sefazAmbiente;
     res.locals.flash = req.session.flash || null;
+    res.locals.tem = (id) => !res.locals.recursos || res.locals.recursos.includes(id);
     delete req.session.flash;
     next();
   });
@@ -134,12 +147,26 @@ export function createApp() {
   // Funcionalidades que dependem do plano do escritorio
   const relatorios = exigirRecurso('relatorios');
   const importar = exigirRecurso('importar_xml');
+  const emissaoNfe = exigirRecurso('emissao_nfe');
+  const emissaoNfse = exigirRecurso('emissao_nfse');
+  const solicitacoes = exigirRecurso('solicitacoes_documentos');
+  const certidoes = exigirRecurso('monitor_cnd');
+  paginaEmpresa.use('/solicitacoes', solicitacoes, solicitacaoRoutes);
   paginaEmpresa.use('/relatorios', relatorios, relatorioRoutes);
   paginaEmpresa.use('/importar', importar, importarRoutes);
+  paginaEmpresa.use('/vendas', emissaoNfe, vendasRoutes);
+  paginaEmpresa.use('/emitir/servicos', emissaoNfse, servicoNfseRoutes);
+  paginaEmpresa.use('/emitir', emissaoNfse, emitirRoutes);
   app.use('/empresas/:empresaId', paginaEmpresa);
   app.use('/empresas', empresaRoutes);
   app.use('/certificados', certificadoRoutes);
+  app.use('/certidoes', certidoes, certidaoRoutes);
+  app.use('/captura', capturaRoutes);
   app.use('/notas', notaRoutes);
+  app.use('/vendas', emissaoNfe, vendasRoutes);
+  app.use('/emitir/servicos', emissaoNfse, servicoNfseRoutes);
+  app.use('/emitir', emissaoNfse, emitirRoutes);
+  app.use('/solicitacoes', solicitacoes, solicitacaoRoutes);
   app.use('/usuarios', usuarioRoutes);
   app.use('/saude', saudeRoutes);
   app.use('/importar', importar, importarRoutes);

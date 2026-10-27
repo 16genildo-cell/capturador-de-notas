@@ -143,7 +143,14 @@
 </div>
 
 <section class="card">
-  <div class="card-head"><h2>Cobranca</h2></div>
+  <div class="card-head">
+    <h2>Cobranca</h2>
+    <% if (conta.asaas && conta.asaas.subscriptionId) { %>
+      <form method="post" action="/plataforma/contas/<%= conta._id %>/sincronizar-asaas">
+        <button class="btn btn-sm btn-ghost">🔄 Sincronizar com Asaas</button>
+      </form>
+    <% } %>
+  </div>
   <p class="muted small">
     <%= conta.asaas && conta.asaas.subscriptionId ? 'Assinatura no Asaas: ' + conta.asaas.subscriptionId : 'Sem assinatura no Asaas (plano definido manualmente).' %>
   </p>

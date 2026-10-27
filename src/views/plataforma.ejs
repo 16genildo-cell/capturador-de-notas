@@ -23,6 +23,16 @@
     <span class="stat-value small-value"><span class="tag <%= asaasAtivo ? 'tag-ok' : 'tag-warn' %>"><%= asaasAtivo ? asaasAmbiente : 'nao configurada' %></span></span>
     <span class="muted small"><a class="link" href="/saude">Saude do servidor</a></span>
   </div>
+  <div class="card stat">
+    <span class="stat-label">Pacotes e Planos</span>
+    <span class="stat-value"><%= (locals.planosAdmin || planos).length %></span>
+    <span class="muted small"><a class="link" href="/plataforma/planos">Ver e criar pacotes &rarr;</a></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Controle de Pagamentos</span>
+    <span class="stat-value small-value"><span class="tag tag-ok">Mensalidades</span></span>
+    <span class="muted small"><a class="link" href="/plataforma/pagamentos">Ver pagamentos e relatórios &rarr;</a></span>
+  </div>
 </section>
 
 <section class="card" id="mensagens">
@@ -62,9 +72,10 @@
 </section>
 
 <section class="card">
-  <details>
-    <summary class="btn btn-primary">+ Novo escritorio</summary>
-    <form method="post" action="/plataforma/contas" class="form" style="margin-top:16px">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <details style="flex:1;">
+      <summary class="btn btn-primary">+ Novo escritorio</summary>
+      <form method="post" action="/plataforma/contas" class="form" style="margin-top:16px">
       <div class="form-row">
         <label>Responsavel pelo escritorio<input name="nome" required /></label>
         <label>E-mail de acesso<input type="email" name="email" required /></label>
@@ -96,6 +107,9 @@
       <button class="btn btn-primary">Criar escritorio</button>
     </form>
   </details>
+  <a href="/plataforma/pagamentos" class="btn btn-outline" style="white-space:nowrap;">Controle de Pagamentos &rarr;</a>
+  <a href="/plataforma/planos" class="btn btn-ghost" style="white-space:nowrap;">Gerenciar pacotes de planos &rarr;</a>
+  </div>
 </section>
 
 <section class="card">
@@ -160,6 +174,9 @@
                   <input type="hidden" name="acao" value="observacao" />
                   <input type="text" name="observacao" placeholder="anotacao interna" value="<%= c.observacao || '' %>" />
                   <button class="btn btn-sm">Salvar nota</button>
+                </form>
+                <form method="post" action="/plataforma/contas/<%= id %>/sincronizar-asaas" class="form form-mini">
+                  <button class="btn btn-sm btn-ghost" title="Reconcilia o status diretamente com a API do Asaas">🔄 Sincronizar Asaas</button>
                 </form>
               </div>
             </details>

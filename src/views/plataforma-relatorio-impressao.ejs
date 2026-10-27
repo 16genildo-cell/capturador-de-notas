@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Pagamentos - <%= mesFormatado %> - <%= nomeProduto %></title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #ffffff;
+      --surface: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      margin: 0;
+      padding: 30px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .topo-relatorio {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .titulo-principal {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      color: var(--text);
+    }
+    .subtitulo {
+      color: var(--muted);
+      margin: 0;
+      font-size: 14px;
+    }
+    .meta-emissao {
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .acoes-topo {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-voltar {
+      background: #f1f5f9;
+      color: #334155;
+    }
+    .cards-resumo {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .card-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .card-stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .card-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .val-pago { color: #16a34a; }
+    .val-pendente { color: #d97706; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th {
+      background: #f1f5f9;
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      font-size: 12px;
+    }
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag-pago {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .tag-pendente {
+      background: #fef3c7;
+      color: #b45309;
+    }
+    .dir { text-align: right; }
+    .mono { font-family: monospace; }
+    .rodape-assinaturas {
+      margin-top: 50px;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 15px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    @media print {
+      body { padding: 0; }
+      .acoes-topo { display: none; }
+      .card-stat { border: 1px solid #ccc; }
+      th { background: #eee !important; color: #000; }
+      tr:nth-child(even) { background: #f9f9f9 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="acoes-topo">
+    <button onclick="window.print()" class="btn">🖨 Imprimir ou Salvar em PDF</button>
+    <a href="/plataforma/pagamentos?mes=<%= mes %>" class="btn btn-voltar">← Voltar para o Painel</a>
+  </div>
+
+  <header class="topo-relatorio">
+    <div>
+      <h1 class="titulo-principal">Relatório de Mensalidades & Pagamentos</h1>
+      <p class="subtitulo">Competência: <strong><%= mesFormatado %></strong> (<%= mes %>) · Sistema <%= nomeProduto %></p>
+      <% if (filtros.status && filtros.status !== 'todos') { %>
+        <p style="margin:4px 0 0 0; font-size:12px; color:#2563eb;">Filtro aplicado: <%= filtros.status === 'pagos' ? 'Apenas Pagos' : 'Apenas Pendentes' %></p>
+      <% } %>
+    </div>
+    <div class="meta-emissao">
+      <div>Emitido em: <strong><%= new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %></strong></div>
+      <div>Emitido por: <strong><%= adminEmail %></strong></div>
+    </div>
+  </header>
+
+  <section class="cards-resumo">
+    <div class="card-stat">
+      <div class="card-stat-label">Total de Escritórios</div>
+      <div class="card-stat-value"><%= estatisticas.totalContas %></div>
+    </div>
+    <div class="card-stat">
+      <div class="card-stat-label">Pagos (Recebidos)</div>
+      <div class="card-stat-value val-pago">R$ <%= brl(estatisticas.valorTotalPago) %></div>
+      <div style="font-size:11px; color:#16a34a;"><%= estatisticas.totalPagos %> escritório(s)</div>
+    </div>
+    <div class="card-stat">
+      <div class="card-stat-label">Pendentes (A Receber)</div>
+      <div class="card-stat-value val-pendente">R$ <%= brl(estatisticas.valorTotalPendente) %></div>
+      <div style="font-size:11px; color:#d97706;"><%= estatisticas.totalPendentes %> escritório(s)</div>
+    </div>
+    <div class="card-stat">
+      <div class="card-stat-label">Taxa de Adimplência</div>
+      <div class="card-stat-value"><%= estatisticas.percentualPago %>%</div>
+      <div style="font-size:11px; color:var(--muted);"><%= estatisticas.totalPagos %> de <%= estatisticas.totalContas %> quitados</div>
+    </div>
+  </section>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Escritório / Cliente</th>
+        <th>Documento</th>
+        <th>Contato</th>
+        <th>Plano</th>
+        <th class="dir">Valor (R$)</th>
+        <th>Situação</th>
+        <th>Data Pagamento</th>
+        <th>Forma</th>
+        <th>Observações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (itens.length === 0) { %>
+        <tr>
+          <td colspan="10" style="text-align:center; padding:20px; color:var(--muted);">Nenhum escritório encontrado para os critérios selecionados.</td>
+        </tr>
+      <% } %>
+      <% itens.forEach((item, index) => { %>
+        <tr>
+          <td style="color:var(--muted); font-size:11px;"><%= index + 1 %></td>
+          <td>
+            <strong><%= item.nome %></strong>
+            <div style="font-size:11px; color:var(--muted);"><%= item.responsavel %></div>
+          </td>
+          <td class="mono"><%= item.documento || '-' %></td>
+          <td>
+            <div><%= item.email %></div>
+            <% if (item.telefone) { %><div style="font-size:11px; color:var(--muted);"><%= item.telefone %></div><% } %>
+          </td>
+          <td><%= item.planoNome %></td>
+          <td class="dir mono"><strong>R$ <%= brl(item.valor) %></strong></td>
+          <td>
+            <span class="tag <%= item.pago ? 'tag-pago' : 'tag-pendente' %>">
+              <%= item.pago ? '✔ PAGO' : '⏳ PENDENTE' %>
+            </span>
+          </td>
+          <td class="nowrap">
+            <%= item.pagoEm ? new Date(item.pagoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '-' %>
+          </td>
+          <td><%= item.pago ? (item.formaPagamento || 'PIX').toUpperCase() : '-' %></td>
+          <td style="font-size:11px; max-width:200px;">
+            <%= item.observacoes || (item.confirmadoPor ? 'Confirmado por ' + item.confirmadoPor : '-') %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:700; background:#f8fafc;">
+        <td colspan="5" style="padding:10px;">TOTAL</td>
+        <td class="dir mono" style="padding:10px;">R$ <%= brl(itens.reduce((acc, x) => acc + (x.valor || 0), 0)) %></td>
+        <td colspan="4" style="padding:10px; font-size:11px; color:var(--muted);">
+          Listando <%= itens.length %> de <%= estatisticas.totalContas %> escritórios
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer class="rodape-assinaturas">
+    <div><%= nomeProduto %> · Plataforma de Gestão Fiscal e Tributária</div>
+    <div>Documento gerado para controle interno e auditoria administrativa</div>
+  </footer>
+
+</body>
+</html>

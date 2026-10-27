@@ -1,0 +1,692 @@
+<%
+  const totalPacotes = planos.length;
+  const ativos = planos.filter(p => p.ativo).length;
+  const publicos = planos.filter(p => p.ativo && p.publico).length;
+  const totalContas = planos.reduce((acc, p) => acc + (p.escritorios || 0), 0);
+  const totalFuncs = (funcionalidades || []).length;
+
+  // Agrupamento das funcionalidades para exibição estruturada
+  const gruposOrdem = ['Captura', 'Notas', 'Auditoria', 'Relatórios', 'Emissão', 'Escritório'];
+  const gruposNomes = {
+    'Captura': { titulo: '1. Captura Automática SEFAZ & Municípios', icone: 'captura', desc: 'Coleta contínua em segundo plano direto dos web services oficiais' },
+    'Notas': { titulo: '2. Documentos, Armazenamento & Exportação', icone: 'notas', desc: 'Manifestação do destinatário, downloads em lote e arquivos contábeis' },
+    'Auditoria': { titulo: '3. Auditoria Fiscal & Conformidade', icone: 'painel', desc: 'Cruzamentos fiscais, malha fina preventiva e detecção de riscos' },
+    'Relatórios': { titulo: '4. Inteligência Financeira & DRE', icone: 'relatorios', desc: 'Relatórios analíticos, demonstrativo de resultado e análise de margens' },
+    'Emissão': { titulo: '5. Frente de Caixa & Emissão Ativa (PDV)', icone: 'produtos', desc: 'Emissão de cupom NFC-e, NF-e, NFS-e e controle de estoque' },
+    'Escritório': { titulo: '6. Comunicação & Gestão do Escritório', icone: 'tarefas', desc: 'Portal do cliente, tarefas, solicitações de documentos e CNDs automáticas' },
+  };
+
+  const funcsPorGrupo = {};
+  gruposOrdem.forEach(g => { funcsPorGrupo[g] = []; });
+  (funcionalidades || []).forEach(f => {
+    const g = funcsPorGrupo[f.grupo] ? f.grupo : 'Notas';
+    funcsPorGrupo[g].push(f);
+  });
+%>
+
+<!-- Estatísticas Gerais de Pacotes -->
+<section class="cards">
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Total de pacotes</span>
+      <div class="stat-icon-wrapper" style="color: #6366f1;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= totalPacotes %></span>
+    <span class="muted small"><%= ativos %> ativo(s) · <%= totalPacotes - ativos %> arquivado(s)</span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Públicos no site</span>
+      <div class="stat-icon-wrapper" style="color: #06b6d4;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= publicos %></span>
+    <span class="muted small">Disponíveis para contratação online</span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Escritórios assinantes</span>
+      <div class="stat-icon-wrapper" style="color: #10b981;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= totalContas %></span>
+    <span class="muted small"><a class="link" href="/plataforma">Ver contas ativas</a></span>
+  </div>
+
+  <div class="card stat">
+    <div class="card-stat-top">
+      <span class="stat-label">Catálogo de recursos</span>
+      <div class="stat-icon-wrapper" style="color: #8b5cf6;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+    </div>
+    <span class="stat-value"><%= totalFuncs %></span>
+    <span class="muted small">Funcionalidades modulares gerenciáveis</span>
+  </div>
+</section>
+
+<!-- Barra Superior de Ações -->
+<div class="planos-topo-acoes">
+  <div>
+    <h2 style="margin:0 0 4px; font-size:1.25rem;">Pacotes de Planos do SaaS</h2>
+    <p class="muted small" style="margin:0;">Configure o preço, franquias de clientes e selecione exatamente quais módulos cada pacote libera.</p>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <button type="button" class="btn btn-primary" onclick="abrirEditorNovo()" style="display:inline-flex; align-items:center; gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Novo Pacote de Plano</span>
+    </button>
+  </div>
+</div>
+
+<!-- Grade de Pacotes Cadastrados -->
+<section class="planos-grid">
+  <% planos.forEach(p => { 
+       const qtdMarcadas = p.funcionalidades.length;
+       const pct = Math.round((qtdMarcadas / Math.max(1, totalFuncs)) * 100);
+       const gruposPresentes = [...new Set(p.funcionalidades.map(id => {
+         const f = (funcionalidades || []).find(x => x.id === id);
+         return f ? f.grupo : null;
+       }).filter(Boolean))];
+  %>
+    <div class="plano-card <%= p.destaque ? 'plano-destaque' : '' %>" id="card-plano-<%= p.id %>">
+      <div>
+        <div class="plano-card-header">
+          <div class="plano-titulo-bloco">
+            <h3 class="plano-nome"><%= p.nome %></h3>
+            <span class="plano-codigo">#<%= p.id %></span>
+          </div>
+          <div class="plano-badges">
+            <% if (p.destaque) { %><span class="tag tag-warn" title="Em destaque na página de planos">Destaque</span><% } %>
+            <% if (!p.ativo) { %><span class="tag tag-err">Arquivado</span><% } else { %><span class="tag tag-ok">Ativo</span><% } %>
+            <% if (!p.publico) { %><span class="tag" style="background:#e2e8f0; color:#475569;">Oculto</span><% } %>
+          </div>
+        </div>
+
+        <% if (p.descricao) { %>
+          <p class="muted small" style="margin:0 0 10px; line-height:1.4;"><%= p.descricao %></p>
+        <% } %>
+
+        <div class="plano-preco-bloco">
+          <span class="plano-preco-val"><%= brl(p.preco) %></span>
+          <span class="plano-preco-per">/ <%= p.rotuloPeriodo.toLowerCase() %></span>
+        </div>
+
+        <div class="plano-limites">
+          <div class="plano-limite-item">
+            <span>Limite de clientes:</span>
+            <strong><%= p.empresas == null ? 'Ilimitado' : p.empresas + ' CNPJ(s)' %></strong>
+          </div>
+          <div class="plano-limite-item">
+            <span>Equipe do escritório:</span>
+            <strong><%= p.usuarios == null ? 'Ilimitada' : p.usuarios + ' usuário(s)' %></strong>
+          </div>
+          <div class="plano-limite-item">
+            <span>Período de teste:</span>
+            <strong><%= p.diasGratis > 0 ? p.diasGratis + ' dias grátis' : 'Sem teste' %></strong>
+          </div>
+          <div class="plano-limite-item">
+            <span>Guarda de XML:</span>
+            <strong><%= p.rotuloArmazenamento %></strong>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso de Funcionalidades -->
+        <div class="plano-func-resumo">
+          <div class="plano-progresso-topo">
+            <span>Funcionalidades liberadas:</span>
+            <strong style="color:var(--primary);"><%= qtdMarcadas %> de <%= totalFuncs %> (<%= pct %>%)</strong>
+          </div>
+          <div class="plano-progresso-barra" title="<%= pct %>% das funcionalidades do sistema incluídas">
+            <div class="plano-progresso-preenchimento" style="width: <%= pct %>%;"></div>
+          </div>
+          <div class="plano-tags-grupos">
+            <% gruposPresentes.forEach(g => { %>
+              <span class="tag" style="font-size:0.68rem; background:var(--primary-soft); color:var(--primary); border:1px solid var(--primary-border);"><%= g %></span>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+
+      <div class="plano-card-footer">
+        <a href="/plataforma?plano=<%= p.id %>" class="small muted" title="Filtrar contas que utilizam este plano">
+          <strong><%= p.escritorios || 0 %></strong> escritório(s) assinante(s)
+        </a>
+        <button type="button" class="btn btn-sm btn-primary" onclick="abrirEditor('<%= p.id %>')" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Editar Funcionalidades</span>
+        </button>
+      </div>
+    </div>
+  <% }) %>
+</section>
+
+<!-- Matriz Comparativa de Funcionalidades entre os Pacotes -->
+<section class="card matriz-comparativa">
+  <div class="card-head" style="margin-bottom:12px;">
+    <div>
+      <h3 style="margin:0 0 4px; font-size:1.05rem;">Matriz Comparativa de Recursos</h3>
+      <p class="muted small" style="margin:0;">Visualize em tempo real quais módulos estão ativados em cada um dos seus pacotes comerciais.</p>
+    </div>
+  </div>
+
+  <div class="tabela-rolagem">
+    <table class="table tabela-matriz">
+      <thead>
+        <tr>
+          <th style="min-width:240px;">Módulo / Funcionalidade</th>
+          <th style="min-width:110px;">Categoria</th>
+          <% planos.forEach(p => { %>
+            <th style="text-align:center; min-width:130px;">
+              <div><strong><%= p.nome %></strong></div>
+              <div class="muted small"><%= brl(p.preco) %></div>
+            </th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% (funcionalidades || []).forEach(f => { %>
+          <tr>
+            <td>
+              <div style="font-weight:600; font-size:0.86rem; color:#0f172a;"><%= f.nome %></div>
+              <div class="muted small" style="font-size:0.75rem; line-height:1.3;"><%= f.descricao %></div>
+            </td>
+            <td>
+              <span class="tag" style="font-size:0.7rem;"><%= f.grupo %></span>
+            </td>
+            <% planos.forEach(p => { 
+                 const possui = p.funcionalidades.includes(f.id);
+            %>
+              <td style="text-align:center;">
+                <% if (possui) { %>
+                  <span class="func-check-ok" title="Liberado no pacote <%= p.nome %>">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                <% } else { %>
+                  <span class="func-check-off" title="Não incluso no pacote <%= p.nome %>">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </span>
+                <% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- =====================================================================
+     MODAL DO EDITOR DE PACOTE E FUNCIONALIDADES (COM ABAS & SCROLL COMPLETO)
+     ===================================================================== -->
+<div class="plano-modal-backdrop" id="modal-editor-plano" onclick="if(event.target === this) fecharEditor()">
+  <div class="plano-modal-janela" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    
+    <!-- Topo do Modal -->
+    <div class="plano-modal-head">
+      <div>
+        <h3 id="modal-titulo" style="margin:0; font-size:1.25rem; font-weight:750; color:#0f172a;">Editar Pacote de Plano</h3>
+        <span class="muted small" id="modal-subtitulo">Gerencie as regras comerciais e os módulos liberados para o escritório</span>
+      </div>
+      <button type="button" class="btn-icone" onclick="fecharEditor()" aria-label="Fechar" title="Fechar (ESC)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Navegação em Abas do Modal -->
+    <nav class="modal-nav-abas" aria-label="Abas de configuração do pacote">
+      <button type="button" class="modal-aba-btn active" id="btn-aba-funcs" onclick="trocarAbaModal('funcs')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Funcionalidades & Módulos</span>
+        <span class="tab-badge" id="tab-badge-funcs">0 / <%= totalFuncs %></span>
+      </button>
+
+      <button type="button" class="modal-aba-btn" id="btn-aba-dados" onclick="trocarAbaModal('dados')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Dados Comerciais & Franquia</span>
+      </button>
+    </nav>
+
+    <!-- Formulário do Plano -->
+    <form id="form-editor-plano" method="post" action="/plataforma/planos" onsubmit="return validarEnvio(this)">
+      <div class="plano-modal-body">
+        
+        <!-- =============================================================
+             ABA 1: FUNCIONALIDADES & MÓDULOS (ATIVA POR PADRÃO)
+             ============================================================= -->
+        <div id="secao-modal-funcs" class="secao-aba-modal">
+          
+          <!-- Barra de Controle Rápido -->
+          <div class="func-painel-topo">
+            <div class="func-contador-bloco">
+              <div>
+                <span class="func-badge-qtd" id="modal-qtd-func">0 de <%= totalFuncs %></span>
+                <span style="margin-left:8px; font-weight:600; font-size:0.88rem; color:#0f172a;">módulos liberados</span>
+              </div>
+            </div>
+
+            <!-- Presets de Marcação Rápida -->
+            <div class="func-presets">
+              <span class="muted small" style="margin-right:4px;">Presets rápidos:</span>
+              <button type="button" class="preset-btn" onclick="aplicarPreset('basico')" title="Apenas captura SEFAZ e consulta de notas">🟢 Básico (Captura)</button>
+              <button type="button" class="preset-btn" onclick="aplicarPreset('intermediario')" title="Captura + Auditoria Fiscal + CNDs + Tarefas">🔵 Fiscal + CNDs</button>
+              <button type="button" class="preset-btn" onclick="aplicarPreset('completo')" title="Todos os módulos liberados incluindo PDV e Estoque">🟣 Completo (Tudo)</button>
+              <span class="muted" style="margin:0 4px;">|</span>
+              <button type="button" class="btn-link small" onclick="marcarTodas(true)">Marcar todas</button> ·
+              <button type="button" class="btn-link small" onclick="marcarTodas(false)">Desmarcar todas</button>
+            </div>
+          </div>
+
+          <!-- Grupos de Funcionalidades em Cards -->
+          <% gruposOrdem.forEach(g => { 
+               const itens = funcsPorGrupo[g] || [];
+               if (!itens.length) return;
+               const meta = gruposNomes[g] || { titulo: g, desc: '' };
+          %>
+            <div class="func-grupo-card" data-grupo="<%= g %>">
+              <div class="func-grupo-head">
+                <div class="func-grupo-titulo">
+                  <span><%= meta.titulo %></span>
+                  <span class="tag" id="tag-grupo-<%= g %>" style="font-size:0.7rem; background:#f1f5f9; color:#475569;">0/<%= itens.length %></span>
+                </div>
+                <div class="func-grupo-acoes">
+                  <button type="button" class="btn-link" onclick="marcarGrupo('<%= g %>', true)">Marcar grupo</button>
+                  <span class="muted">·</span>
+                  <button type="button" class="btn-link" onclick="marcarGrupo('<%= g %>', false)">Desmarcar</button>
+                </div>
+              </div>
+
+              <div class="func-cards-grid">
+                <% itens.forEach(f => { %>
+                  <label class="func-item-card" id="card-chk-<%= f.id %>">
+                    <input type="checkbox" name="funcionalidades" value="<%= f.id %>" class="chk-func" data-grupo="<%= g %>" onchange="atualizarCard(this)" />
+                    <div class="func-item-info">
+                      <div class="func-item-nome">
+                        <span><%= f.nome %></span>
+                      </div>
+                      <div class="func-item-desc"><%= f.descricao %></div>
+                    </div>
+                  </label>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+
+          <div style="text-align:right; margin-top:16px;">
+            <button type="button" class="btn btn-sm btn-ghost" onclick="trocarAbaModal('dados')">
+              <span>Avançar para Dados Comerciais &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- =============================================================
+             ABA 2: DADOS COMERCIAIS & FRANQUIA
+             ============================================================= -->
+        <div id="secao-modal-dados" class="secao-aba-modal" style="display:none;">
+          <div style="background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:16px;">
+            <h4 style="margin:0 0 14px; font-size:1rem; color:#0f172a;">Preço, Prazos e Franquias do Pacote</h4>
+            
+            <div class="form-row">
+              <label>
+                Nome do pacote *
+                <input type="text" name="nome" id="edit-nome" required placeholder="Ex.: Essencial, Profissional, Ilimitado" maxlength="60" />
+              </label>
+              <label id="campo-codigo-bloco">
+                Código identificador
+                <input type="text" name="codigo" id="edit-codigo" placeholder="ex.: basico (gerado automático se vazio)" maxlength="40" />
+              </label>
+            </div>
+
+            <label style="margin-top:12px;">
+              Descrição comercial do pacote
+              <input type="text" name="descricao" id="edit-descricao" placeholder="Ex.: Ideal para escritórios de contabilidade com até 20 clientes." maxlength="300" />
+            </label>
+
+            <div class="form-row" style="margin-top:12px;">
+              <label>
+                Preço da assinatura (R$) *
+                <input type="number" step="0.01" min="0" name="preco" id="edit-preco" required placeholder="Ex.: 149.90" />
+              </label>
+              <label>
+                Período de cobrança *
+                <select name="periodo" id="edit-periodo">
+                  <% (periodos || []).forEach(per => { %>
+                    <option value="<%= per.id %>"><%= per.nome %></option>
+                  <% }) %>
+                </select>
+              </label>
+            </div>
+
+            <div class="form-row" style="margin-top:12px;">
+              <label>
+                Limite de clientes (CNPJs/CPFs)
+                <input type="number" min="0" name="limiteEmpresas" id="edit-limiteEmpresas" placeholder="Em branco = clientes ilimitados" />
+              </label>
+              <label>
+                Limite de usuários da equipe
+                <input type="number" min="1" name="limiteUsuarios" id="edit-limiteUsuarios" placeholder="Em branco = equipe ilimitada" />
+              </label>
+            </div>
+
+            <div class="form-row" style="margin-top:12px;">
+              <label>
+                Dias de teste grátis (degustação)
+                <input type="number" min="0" max="365" name="diasGratis" id="edit-diasGratis" value="14" />
+              </label>
+              <label>
+                Guarda do XML das notas (dias)
+                <input type="number" min="1" max="3650" name="retencaoDias" id="edit-retencaoDias" placeholder="Em branco = guarda permanente" />
+              </label>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; padding-top:14px; border-top:1px solid #e2e8f0; font-size:0.86rem;">
+              <label style="flex-direction:row; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="ativo" id="edit-ativo" value="true" checked />
+                <span><strong>Pacote Ativo</strong> (disponível para assinaturas)</span>
+              </label>
+              <label style="flex-direction:row; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="publico" id="edit-publico" value="true" checked />
+                <span><strong>Público no site</strong> (exibido na página inicial)</span>
+              </label>
+              <label style="flex-direction:row; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="destaque" id="edit-destaque" value="true" />
+                <span><strong>Destacar como recomendado</strong></span>
+              </label>
+              <label style="flex-direction:row; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="apagarAoBaixar" id="edit-apagarAoBaixar" value="true" />
+                <span>Apagar XML após download</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="text-align:left; margin-top:12px;">
+            <button type="button" class="btn btn-sm btn-ghost" onclick="trocarAbaModal('funcs')">
+              <span>&larr; Voltar para Funcionalidades</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Rodapé Fixo do Modal -->
+      <div class="plano-modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="fecharEditor()">Cancelar</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="muted small" id="aviso-salvamento"></span>
+          <button type="submit" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span id="btn-submit-texto">Salvar Pacote</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Dados dos Planos para o Editor Interativo -->
+<script>
+  var PLANOS_DADOS = <%- JSON.stringify(planos) %>;
+  var PERIODOS_DADOS = <%- JSON.stringify(periodos) %>;
+  var TOTAL_FUNCS = <%= totalFuncs %>;
+  var EDITAR_ID_INICIAL = <%- JSON.stringify(editarId || '') %>;
+  var ABRIR_NOVO_INICIAL = <%= abrirNovo ? 'true' : 'false' %>;
+
+  var PRESETS = {
+    basico: ['captura_nfe', 'captura_nfse', 'captura_cte', 'manifestacao', 'download_lote'],
+    intermediario: [
+      'captura_nfe', 'captura_nfse', 'captura_cte', 'manifestacao', 'download_lote',
+      'relatorios', 'importar_xml', 'auditoria_fiscal', 'solicitacoes_documentos', 'monitor_cnd', 'alertas'
+    ],
+    completo: [
+      'captura_nfe', 'captura_nfse', 'captura_cte', 'manifestacao', 'download_lote',
+      'relatorios', 'importar_xml', 'auditoria_fiscal', 'dre_gerencial', 'exportacao_sistemas',
+      'emissao_nfe', 'emissao_nfse', 'controle_estoque', 'solicitacoes_documentos', 'monitor_cnd',
+      'acesso_clientes', 'alertas', 'chat_suporte'
+    ]
+  };
+
+  function trocarAbaModal(aba) {
+    var secaoFuncs = document.getElementById('secao-modal-funcs');
+    var secaoDados = document.getElementById('secao-modal-dados');
+    var btnFuncs = document.getElementById('btn-aba-funcs');
+    var btnDados = document.getElementById('btn-aba-dados');
+
+    if (aba === 'funcs') {
+      secaoFuncs.style.display = 'block';
+      secaoDados.style.display = 'none';
+      btnFuncs.classList.add('active');
+      btnDados.classList.remove('active');
+    } else {
+      secaoFuncs.style.display = 'none';
+      secaoDados.style.display = 'block';
+      btnFuncs.classList.remove('active');
+      btnDados.classList.add('active');
+    }
+  }
+
+  function atualizarCard(input) {
+    var card = document.getElementById('card-chk-' + input.value);
+    if (card) {
+      if (input.checked) card.classList.add('marcado');
+      else card.classList.remove('marcado');
+    }
+    recalcularContadores();
+  }
+
+  function recalcularContadores() {
+    var checkboxes = document.querySelectorAll('.chk-func');
+    var marcadas = 0;
+    var porGrupo = {};
+
+    checkboxes.forEach(function (c) {
+      var g = c.getAttribute('data-grupo');
+      if (!porGrupo[g]) porGrupo[g] = { total: 0, marcadas: 0 };
+      porGrupo[g].total++;
+      if (c.checked) {
+        marcadas++;
+        porGrupo[g].marcadas++;
+      }
+    });
+
+    var badgeQtd = document.getElementById('modal-qtd-func');
+    if (badgeQtd) {
+      badgeQtd.textContent = marcadas + ' de ' + TOTAL_FUNCS;
+    }
+    var tabBadge = document.getElementById('tab-badge-funcs');
+    if (tabBadge) {
+      tabBadge.textContent = marcadas + ' / ' + TOTAL_FUNCS;
+    }
+
+    Object.keys(porGrupo).forEach(function (g) {
+      var tag = document.getElementById('tag-grupo-' + g);
+      if (tag) {
+        tag.textContent = porGrupo[g].marcadas + '/' + porGrupo[g].total;
+        if (porGrupo[g].marcadas === porGrupo[g].total) {
+          tag.style.background = '#dcfce7';
+          tag.style.color = '#15803d';
+        } else if (porGrupo[g].marcadas > 0) {
+          tag.style.background = '#eef2ff';
+          tag.style.color = '#4f46e5';
+        } else {
+          tag.style.background = '#f1f5f9';
+          tag.style.color = '#475569';
+        }
+      }
+    });
+  }
+
+  function marcarTodas(marcar) {
+    document.querySelectorAll('.chk-func').forEach(function (c) {
+      c.checked = marcar;
+      var card = document.getElementById('card-chk-' + c.value);
+      if (card) {
+        if (marcar) card.classList.add('marcado');
+        else card.classList.remove('marcado');
+      }
+    });
+    recalcularContadores();
+  }
+
+  function marcarGrupo(grupo, marcar) {
+    document.querySelectorAll('.chk-func[data-grupo="' + grupo + '"]').forEach(function (c) {
+      c.checked = marcar;
+      var card = document.getElementById('card-chk-' + c.value);
+      if (card) {
+        if (marcar) card.classList.add('marcado');
+        else card.classList.remove('marcado');
+      }
+    });
+    recalcularContadores();
+  }
+
+  function aplicarPreset(nome) {
+    var lista = PRESETS[nome] || [];
+    var set = new Set(lista);
+    document.querySelectorAll('.chk-func').forEach(function (c) {
+      var ativo = set.has(c.value);
+      c.checked = ativo;
+      var card = document.getElementById('card-chk-' + c.value);
+      if (card) {
+        if (ativo) card.classList.add('marcado');
+        else card.classList.remove('marcado');
+      }
+    });
+    recalcularContadores();
+  }
+
+  function abrirEditor(id) {
+    var p = PLANOS_DADOS.find(function (item) { return String(item.id) === String(id); });
+    if (!p) return;
+
+    var form = document.getElementById('form-editor-plano');
+    form.action = '/plataforma/planos/' + encodeURIComponent(p.id);
+
+    document.getElementById('modal-titulo').textContent = 'Editar Pacote: ' + p.nome;
+    document.getElementById('modal-subtitulo').textContent = 'Código: #' + p.id + ' · ' + (p.escritorios || 0) + ' escritório(s) assinante(s)';
+    document.getElementById('btn-submit-texto').textContent = 'Salvar Alterações';
+
+    var campoCodigo = document.getElementById('campo-codigo-bloco');
+    if (campoCodigo) campoCodigo.style.display = 'none';
+
+    document.getElementById('edit-nome').value = p.nome || '';
+    document.getElementById('edit-descricao').value = p.descricao || '';
+    document.getElementById('edit-preco').value = p.preco != null ? p.preco : '';
+    document.getElementById('edit-limiteEmpresas').value = p.empresas != null ? p.empresas : '';
+    document.getElementById('edit-limiteUsuarios').value = p.usuarios != null ? p.usuarios : '';
+    document.getElementById('edit-diasGratis').value = p.diasGratis != null ? p.diasGratis : 0;
+    document.getElementById('edit-retencaoDias').value = (p.armazenamento && p.armazenamento.dias) ? p.armazenamento.dias : '';
+
+    document.getElementById('edit-ativo').checked = !!p.ativo;
+    document.getElementById('edit-publico').checked = !!p.publico;
+    document.getElementById('edit-destaque').checked = !!p.destaque;
+    document.getElementById('edit-apagarAoBaixar').checked = !!(p.armazenamento && p.armazenamento.apagarAoBaixar);
+
+    // Ajustar período
+    if (p.periodo) {
+      var perEncontrado = PERIODOS_DADOS.find(function (x) {
+        return x.quantidade === p.periodo.quantidade && x.unidade === p.periodo.unidade;
+      });
+      if (perEncontrado) document.getElementById('edit-periodo').value = perEncontrado.id;
+    }
+
+    // Marcar funcionalidades do plano
+    var funcsSet = new Set(p.funcionalidades || []);
+    document.querySelectorAll('.chk-func').forEach(function (c) {
+      var ativo = funcsSet.has(c.value);
+      c.checked = ativo;
+      var card = document.getElementById('card-chk-' + c.value);
+      if (card) {
+        if (ativo) card.classList.add('marcado');
+        else card.classList.remove('marcado');
+      }
+    });
+
+    recalcularContadores();
+
+    // Começar na aba de funcionalidades
+    trocarAbaModal('funcs');
+
+    var modal = document.getElementById('modal-editor-plano');
+    modal.classList.add('ativo');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function abrirEditorNovo() {
+    var form = document.getElementById('form-editor-plano');
+    form.action = '/plataforma/planos';
+
+    document.getElementById('modal-titulo').textContent = 'Novo Pacote de Plano';
+    document.getElementById('modal-subtitulo').textContent = 'Defina a proposta comercial e selecione as funcionalidades liberadas';
+    document.getElementById('btn-submit-texto').textContent = 'Criar Pacote de Plano';
+
+    var campoCodigo = document.getElementById('campo-codigo-bloco');
+    if (campoCodigo) campoCodigo.style.display = 'block';
+
+    document.getElementById('edit-nome').value = '';
+    document.getElementById('edit-codigo').value = '';
+    document.getElementById('edit-descricao').value = '';
+    document.getElementById('edit-preco').value = '99.90';
+    document.getElementById('edit-limiteEmpresas').value = '10';
+    document.getElementById('edit-limiteUsuarios').value = '3';
+    document.getElementById('edit-diasGratis').value = '14';
+    document.getElementById('edit-retencaoDias').value = '';
+
+    document.getElementById('edit-ativo').checked = true;
+    document.getElementById('edit-publico').checked = true;
+    document.getElementById('edit-destaque').checked = false;
+    document.getElementById('edit-apagarAoBaixar').checked = false;
+
+    // Iniciar com o preset intermediário por padrão
+    aplicarPreset('intermediario');
+
+    // Começar na aba de funcionalidades
+    trocarAbaModal('funcs');
+
+    var modal = document.getElementById('modal-editor-plano');
+    modal.classList.add('ativo');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function fecharEditor() {
+    var modal = document.getElementById('modal-editor-plano');
+    modal.classList.remove('ativo');
+    document.body.style.overflow = '';
+  }
+
+  function validarEnvio(form) {
+    var marcadas = form.querySelectorAll('.chk-func:checked').length;
+    if (marcadas === 0) {
+      alert('Por favor, selecione ao menos uma funcionalidade para este pacote.');
+      trocarAbaModal('funcs');
+      return false;
+    }
+    var nome = document.getElementById('edit-nome').value.trim();
+    if (!nome) {
+      alert('Por favor, informe o nome do pacote.');
+      trocarAbaModal('dados');
+      document.getElementById('edit-nome').focus();
+      return false;
+    }
+    return true;
+  }
+
+  // Atalho de teclado ESC para fechar
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') fecharEditor();
+  });
+
+  // Abrir automaticamente se vier por parâmetro da URL
+  window.addEventListener('DOMContentLoaded', function () {
+    if (EDITAR_ID_INICIAL) {
+      abrirEditor(EDITAR_ID_INICIAL);
+    } else if (ABRIR_NOVO_INICIAL) {
+      abrirEditorNovo();
+    }
+  });
+</script>

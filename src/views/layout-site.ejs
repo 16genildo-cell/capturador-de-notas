@@ -8,13 +8,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" />
-  <link rel="stylesheet" href="/static/css/app.css" />
-  <link rel="stylesheet" href="/static/css/site.css" />
+  <link rel="stylesheet" href="/static/css/app.css?v=2.1" />
+  <link rel="stylesheet" href="/static/css/site.css?v=2.1" />
   <style>body.lp { margin: 0; }</style>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/logo-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/img/logo-192.png" />
+  <link rel="apple-touch-icon" href="/static/img/logo-180.png" />
 </head>
 <body class="lp">
   <header class="lp-topo">
-    <a href="/" class="lp-marca"><span class="selo" aria-hidden="true">CT</span><%= nomeProduto %></a>
+    <a href="/" class="lp-marca"><img src="/static/img/logo-64.png" srcset="/static/img/logo-64.png 1x, /static/img/logo-128.png 2x" alt="" class="selo-logo" width="32" height="32" /><%= nomeProduto %></a>
     <nav class="lp-nav" aria-label="Principal">
       <a href="/#como-funciona" class="so-largo">Como funciona</a>
       <a href="/#contato">Contato</a>

@@ -8,18 +8,21 @@
   const abas = [
     ['Visão geral', b, p === b],
     ['Notas fiscais', b + '/notas', p.startsWith(b + '/notas')],
-    ['Captura', b + '/captura', p.startsWith(b + '/captura')],
+    ['Captura SEFAZ', b + '/captura', p.startsWith(b + '/captura')],
     ['Relatórios', b + '/relatorios', p.startsWith(b + '/relatorios')],
+    ['Solicitações', b + '/solicitacoes', p.startsWith(b + '/solicitacoes')],
   ];
   // Cliente do escritorio: so consulta (visao geral, notas e relatorios).
   if (locals.ehCliente) {
-    for (let i = abas.length - 1; i >= 0; i -= 1) if (!['Visão geral', 'Notas fiscais', 'Relatórios'].includes(abas[i][0])) abas.splice(i, 1);
+    for (let i = abas.length - 1; i >= 0; i -= 1) if (!['Visão geral', 'Notas fiscais', 'Relatórios', 'Solicitações'].includes(abas[i][0])) abas.splice(i, 1);
   }
   // Abas de funcionalidades que o plano do escritorio nao inclui ficam escondidas.
   const temAba = (id) => !locals.recursos || locals.recursos.includes(id);
-  const recursoDaAba = { 'Relatórios': 'relatorios' };
+  const recursoDaAba = { 'Relatórios': 'relatorios', 'Solicitações': 'solicitacoes_documentos' };
   for (let i = abas.length - 1; i >= 0; i -= 1) if (recursoDaAba[abas[i][0]] && !temAba(recursoDaAba[abas[i][0]])) abas.splice(i, 1);
   if (locals.ehAdmin) {
+    if (temAba('emissao_nfe')) abas.push(['Cupom / Vendas', b + '/vendas', p.startsWith(b + '/vendas')]);
+    if (temAba('emissao_nfse')) abas.push(['Emitir NFS-e', b + '/emitir', p.startsWith(b + '/emitir')]);
     if (temAba('importar_xml')) abas.push(['Importar XML', b + '/importar', p.startsWith(b + '/importar')]);
     abas.push(['Configurações', b + '/editar', p.startsWith(b + '/editar')]);
   }
@@ -65,9 +68,9 @@
 
     <% if (!locals.ehCliente) { %>
     <form method="post" action="<%= b %>/capturar" class="inline" onsubmit="var x=this.querySelector('button');x.disabled=true;x.classList.add('loading');">
-      <button class="btn btn-sm btn-primary btn-capturar-topo">
+      <button class="btn btn-sm btn-primary btn-capturar-topo" title="Conecta online à SEFAZ via certificado digital A1 para puxar novas notas">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-        <span>Capturar agora</span>
+        <span>Sincronizar SEFAZ</span>
       </button>
     </form>
     <% } %>

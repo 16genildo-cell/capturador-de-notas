@@ -3,6 +3,31 @@
   <strong><%= a.tipo === 'manutencao' ? 'Manutencao programada: ' : '' %><%= a.titulo %></strong><% if (a.texto) { %><br><%= a.texto %><% } %>
 </div>
 <% }) %>
+
+<% if (locals.certificadosAlerta && certificadosAlerta.length) { %>
+<div class="flash flash-erro" style="margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <strong>⚠️ Alerta de Certificado Digital:</strong> <%= certificadosAlerta.length %> certificado(s) digital(is) vencido(s) ou expirando em menos de 30 dias.
+      <ul style="margin: 6px 0 0 18px; padding: 0; font-size: 0.9rem;">
+        <% certificadosAlerta.forEach((c) => { %>
+          <li style="margin: 3px 0;">
+            <strong><%= c.apelido %></strong>:
+            <% if (c.vencido) { %>
+              <span class="tag tag-err" style="font-size: 0.75rem;">VENCIDO</span> desde <%= new Date(c.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %> - captura interrompida
+            <% } else { %>
+              <span class="tag tag-warn" style="font-size: 0.75rem;">vence em <%= c.diasParaVencer %> dia(s)</span> (<%= new Date(c.validoAte).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) %>)
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+    <% if (locals.ehAdmin) { %>
+      <a href="/certificados" class="btn btn-sm btn-primary">Renovar / Enviar PFX</a>
+    <% } %>
+  </div>
+</div>
+<% } %>
 <section class="cards">
   <div class="card stat">
     <div class="card-stat-top">
@@ -133,8 +158,8 @@
 <div class="grid-2">
   <section class="card">
     <div class="card-head">
-      <h2>Últimas notas</h2>
-      <a href="/notas" class="link">Ver todas →</a>
+      <h2>Últimas notas armazenadas</h2>
+      <a href="/notas" class="link">Pesquisar todas →</a>
     </div>
     <% if (ultimasNotas.length === 0) { %>
       <p class="muted">Nenhuma nota capturada ainda. <a href="/empresas" class="link">Cadastre os clientes</a> e vincule o certificado para começar.</p>
@@ -165,7 +190,10 @@
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>Execuções recentes</h2></div>
+    <div class="card-head">
+      <h2>Execuções de captura (SEFAZ)</h2>
+      <% if (!locals.ehCliente) { %><a href="/captura" class="link">Central de captura →</a><% } %>
+    </div>
     <% if (ultimosLogs.length === 0) { %>
       <p class="muted">Nenhuma execução de captura registrada.</p>
     <% } else { %>

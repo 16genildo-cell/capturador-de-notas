@@ -1,0 +1,353 @@
+<style>
+  .pag-head-card {
+    background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(30,41,59,0.3));
+    border-left: 4px solid var(--primary);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .barra-competencia {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 18px;
+  }
+  .comp-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .comp-select {
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 7px 12px;
+  }
+  .progresso-adimplencia {
+    background: var(--surface-2);
+    border-radius: 999px;
+    height: 6px;
+    width: 100%;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progresso-barra {
+    background: #22c55e;
+    height: 100%;
+    border-radius: 999px;
+  }
+  .form-confirmar-pag {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 260px;
+    margin-top: 6px;
+  }
+  .form-confirmar-pag label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .form-confirmar-pag input, .form-confirmar-pag select {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+</style>
+
+<!-- Banner de identificação -->
+<section class="card pag-head-card">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+    <div>
+      <h2 style="margin:0 0 6px 0; font-size:1.25rem; display:flex; align-items:center; gap:8px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+        Controle de Pagamentos dos Escritórios
+      </h2>
+      <p class="muted" style="margin:0; font-size:0.92rem; max-width:800px; line-height:1.45;">
+        Gerencie as mensalidades dos clientes do sistema por mês de competência. Dê <strong>OK</strong> nos escritórios que efetuaram o pagamento e emita relatórios de clientes adimplentes e inadimplentes.
+      </p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <a href="/plataforma/pagamentos/relatorio?formato=csv&mes=<%= mes %>&status=<%= filtros.status %>&q=<%= encodeURIComponent(filtros.q) %>" class="btn btn-sm btn-outline" title="Baixar planilha CSV/Excel com a relação deste mês">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Exportar CSV / Excel
+      </a>
+      <a href="/plataforma/pagamentos/relatorio?formato=impressao&mes=<%= mes %>&status=<%= filtros.status %>&q=<%= encodeURIComponent(filtros.q) %>" target="_blank" class="btn btn-sm btn-primary" title="Abrir página formatada para impressão ou PDF">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Emitir Relatório / Imprimir
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Barra seletora de competência -->
+<div class="barra-competencia">
+  <form method="get" action="/plataforma/pagamentos" id="form-competencia" class="comp-nav">
+    <input type="hidden" name="status" value="<%= filtros.status %>" />
+    <input type="hidden" name="q" value="<%= filtros.q %>" />
+    <span style="font-weight:600; font-size:0.95rem; color:var(--text); display:flex; align-items:center; gap:6px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Mês de Referência:
+    </span>
+    <select name="mes" class="comp-select" onchange="this.form.submit()">
+      <% mesesDisponiveis.forEach((comp) => { %>
+        <option value="<%= comp.id %>" <%= comp.id === mes ? 'selected' : '' %>>
+          <%= comp.nome %><%= comp.atual ? ' · (Mês Atual)' : '' %>
+        </option>
+      <% }) %>
+    </select>
+  </form>
+
+  <div style="display:flex; gap:8px; align-items:center;">
+    <span class="muted small">Competência selecionada: <strong><%= mesFormatado %></strong></span>
+  </div>
+</div>
+
+<!-- Cards de Resumo Financeiro do Mês -->
+<section class="cards">
+  <div class="card stat">
+    <span class="stat-label">Total de Escritórios</span>
+    <span class="stat-value"><%= estatisticas.totalContas %></span>
+    <span class="muted small">Escritórios ativos no sistema</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Pagos (Recebido)</span>
+    <span class="stat-value" style="color:#22c55e;">R$ <%= brl(estatisticas.valorTotalPago) %></span>
+    <span class="muted small" style="color:#22c55e; font-weight:600;"><%= estatisticas.totalPagos %> escritório(s) com OK</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Pendentes (A Receber)</span>
+    <span class="stat-value" style="color:#f59e0b;">R$ <%= brl(estatisticas.valorTotalPendente) %></span>
+    <span class="muted small" style="color:#f59e0b; font-weight:600;"><%= estatisticas.totalPendentes %> escritório(s) pendente(s)</span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Índice de Adimplência</span>
+    <span class="stat-value"><%= estatisticas.percentualPago %>%</span>
+    <div class="progresso-adimplencia">
+      <div class="progresso-barra" style="width: <%= estatisticas.percentualPago %>%;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Barra de Filtros e Busca -->
+<section class="card">
+  <div class="card-head" style="flex-wrap:wrap; gap:12px;">
+    <!-- Atalhos de Situação -->
+    <nav class="chips" style="margin:0;">
+      <a href="/plataforma/pagamentos?mes=<%= mes %>&status=todos&q=<%= encodeURIComponent(filtros.q) %>" class="chip <%= filtros.status === 'todos' ? 'active' : '' %>">
+        Todos (<%= estatisticas.totalContas %>)
+      </a>
+      <a href="/plataforma/pagamentos?mes=<%= mes %>&status=pagos&q=<%= encodeURIComponent(filtros.q) %>" class="chip <%= filtros.status === 'pagos' ? 'active' : '' %>" style="<%= filtros.status === 'pagos' ? 'background:#16a34a; border-color:#16a34a; color:#fff;' : '' %>">
+        ✔ Pagos (<%= estatisticas.totalPagos %>)
+      </a>
+      <a href="/plataforma/pagamentos?mes=<%= mes %>&status=pendentes&q=<%= encodeURIComponent(filtros.q) %>" class="chip <%= filtros.status === 'pendentes' ? 'active' : '' %>" style="<%= filtros.status === 'pendentes' ? 'background:#d97706; border-color:#d97706; color:#fff;' : '' %>">
+        ⏳ Pendentes (<%= estatisticas.totalPendentes %>)
+      </a>
+    </nav>
+
+    <!-- Formulário de busca por texto -->
+    <form method="get" action="/plataforma/pagamentos" class="filters" style="margin:0;">
+      <input type="hidden" name="mes" value="<%= mes %>" />
+      <input type="hidden" name="status" value="<%= filtros.status %>" />
+      <input type="search" name="q" value="<%= filtros.q %>" placeholder="Nome, documento, e-mail..." style="min-width:220px;" />
+      <button class="btn btn-sm">Filtrar</button>
+      <% if (filtros.q) { %>
+        <a href="/plataforma/pagamentos?mes=<%= mes %>&status=<%= filtros.status %>" class="btn btn-sm btn-ghost">Limpar</a>
+      <% } %>
+    </form>
+  </div>
+
+  <!-- Tabela de Escritórios e Pagamentos -->
+  <div class="tabela-rolagem">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Escritório / Cliente</th>
+          <th>Contato</th>
+          <th>Plano</th>
+          <th>Mensalidade</th>
+          <th>Situação</th>
+          <th>Confirmação / Detalhes</th>
+          <th style="text-align:right;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (itens.length === 0) { %>
+          <tr>
+            <td colspan="7" class="muted" style="text-align:center; padding:24px;">
+              Nenhum escritório encontrado para o filtro selecionado neste mês.
+            </td>
+          </tr>
+        <% } %>
+        <% itens.forEach((c) => { %>
+          <tr>
+            <!-- Identificação do Escritório -->
+            <td>
+              <a href="/plataforma/escritorios/<%= c.contaId %>" class="link" title="Abrir página completa do escritório">
+                <strong><%= c.nome %></strong>
+              </a>
+              <div class="muted small mono">
+                <%= c.documento ? c.documento : 'Sem documento' %>
+                <% if (c.responsavel && c.responsavel !== c.nome) { %>
+                  · <%= c.responsavel %>
+                <% } %>
+              </div>
+            </td>
+
+            <!-- Contato -->
+            <td>
+              <div class="small"><%= c.email %></div>
+              <% if (c.telefone) { %>
+                <% const foneLimpo = c.telefone.replace(/\D/g, ''); %>
+                <div class="small muted">
+                  <a class="link" href="https://wa.me/<%= foneLimpo.length <= 11 ? '55' + foneLimpo : foneLimpo %>" target="_blank" rel="noopener">
+                    WhatsApp: <%= c.telefone %>
+                  </a>
+                </div>
+              <% } %>
+            </td>
+
+            <!-- Plano Atual -->
+            <td>
+              <span class="tag tag-ok"><%= c.planoNome %></span>
+            </td>
+
+            <!-- Valor -->
+            <td class="mono" style="font-size:0.95rem; font-weight:600;">
+              R$ <%= brl(c.valor) %>
+            </td>
+
+            <!-- Status de Pagamento -->
+            <td>
+              <% if (c.pago) { %>
+                <span class="tag tag-ok" style="font-size:0.8rem; padding:3px 8px;">
+                  ✔ PAGO
+                </span>
+              <% } else { %>
+                <span class="tag tag-warn" style="font-size:0.8rem; padding:3px 8px;">
+                  ⏳ PENDENTE
+                </span>
+              <% } %>
+              <% if (c.statusConta === 'suspensa') { %>
+                <div style="margin-top:4px;"><span class="tag tag-err" style="font-size:0.72rem; letter-spacing:0.02em;">⛔ ACESSO SUSPENSO</span></div>
+              <% } %>
+            </td>
+
+            <!-- Detalhes da Confirmação -->
+            <td class="small">
+              <% if (c.pago) { %>
+                <div>
+                  <strong><%= c.pagoEm ? new Date(c.pagoEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'Sim' %></strong>
+                  <span class="muted">via <%= (c.formaPagamento || 'PIX').toUpperCase() %></span>
+                </div>
+                <% if (c.confirmadoPor) { %>
+                  <div class="muted small">Por: <%= c.confirmadoPor %></div>
+                <% } %>
+                <% if (c.observacoes) { %>
+                  <div class="muted small" style="max-width:200px;">Obs: <%= c.observacoes %></div>
+                <% } %>
+              <% } else { %>
+                <span class="muted small">Aguardando pagamento</span>
+              <% } %>
+            </td>
+
+            <!-- Ações -->
+            <td class="row-actions" style="justify-content:flex-end; align-items:center;">
+              <% if (!c.pago) { %>
+                <!-- Dar OK (Confirmar Pagamento) -->
+                <details class="inline-det">
+                  <summary class="btn btn-sm btn-primary" style="background:#16a34a; border-color:#16a34a; font-weight:600;">
+                    ✔ Dar OK
+                  </summary>
+                  <form method="post" action="/plataforma/pagamentos/<%= c.contaId %>/ok" class="form-confirmar-pag" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Confirmando...';">
+                    <input type="hidden" name="mes" value="<%= mes %>" />
+                    <strong style="font-size:0.88rem; color:var(--text); margin-bottom:4px;">
+                      Confirmar pagamento · <%= c.nome %>
+                    </strong>
+                    
+                    <label>
+                      Valor Recebido (R$):
+                      <input type="number" step="0.01" min="0" name="valor" value="<%= (c.valor || 0).toFixed(2) %>" required />
+                    </label>
+
+                    <label>
+                      Forma de Pagamento:
+                      <select name="formaPagamento">
+                        <option value="pix" selected>PIX</option>
+                        <option value="boleto">Boleto Bancário</option>
+                        <option value="cartao">Cartão de Crédito</option>
+                        <option value="transferencia">Transferência / TED</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="outro">Outro</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Observações (opcional):
+                      <input type="text" name="observacoes" placeholder="Ex: comprovante WhatsApp..." maxlength="300" />
+                    </label>
+
+                    <label style="flex-direction:row; align-items:center; gap:6px; margin:4px 0; cursor:pointer;">
+                      <input type="checkbox" name="atualizarAcesso" value="1" checked />
+                      <span>Manter/ativar acesso da conta</span>
+                    </label>
+
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                      <button type="submit" class="btn btn-sm btn-primary" style="background:#16a34a; border-color:#16a34a; width:100%;">
+                        ✔ Confirmar OK
+                      </button>
+                    </div>
+                  </form>
+                </details>
+
+                <!-- Opção de Suspender / Ativar Serviço -->
+                <% if (c.statusConta === 'suspensa') { %>
+                  <form method="post" action="/plataforma/pagamentos/<%= c.contaId %>/ativar" class="inline" onsubmit="return confirm('Deseja reativar o acesso do escritório <%= c.nome %>?');">
+                    <input type="hidden" name="mes" value="<%= mes %>" />
+                    <button type="submit" class="btn btn-sm btn-outline" style="border-color:#16a34a; color:#16a34a; font-weight:600;" title="Reativar acesso do escritório">
+                      ⚡ Ativar
+                    </button>
+                  </form>
+                <% } else { %>
+                  <form method="post" action="/plataforma/pagamentos/<%= c.contaId %>/suspender" class="inline" onsubmit="return confirm('Deseja realmente SUSPENDER o acesso do escritório <%= c.nome %> por falta de pagamento? O cliente não conseguirá acessar o sistema até ser reativado.');">
+                    <input type="hidden" name="mes" value="<%= mes %>" />
+                    <button type="submit" class="btn btn-sm btn-danger" style="font-weight:600;" title="Suspender o serviço/acesso deste escritório por falta de pagamento">
+                      ⛔ Suspender
+                    </button>
+                  </form>
+                <% } %>
+              <% } else { %>
+                <!-- Se já pagou, mas estiver suspenso por outro motivo, permite ativar -->
+                <% if (c.statusConta === 'suspensa') { %>
+                  <form method="post" action="/plataforma/pagamentos/<%= c.contaId %>/ativar" class="inline" onsubmit="return confirm('Deseja reativar o acesso do escritório <%= c.nome %>?');">
+                    <input type="hidden" name="mes" value="<%= mes %>" />
+                    <button type="submit" class="btn btn-sm btn-outline" style="border-color:#16a34a; color:#16a34a; font-weight:600;" title="Reativar acesso do escritório">
+                      ⚡ Ativar
+                    </button>
+                  </form>
+                <% } %>
+                <!-- Desmarcar Pagamento -->
+                <form method="post" action="/plataforma/pagamentos/<%= c.contaId %>/desmarcar" class="inline" onsubmit="return confirm('Deseja realmente desmarcar o pagamento do escritório <%= c.nome %> para <%= mesFormatado %>?');">
+                  <input type="hidden" name="mes" value="<%= mes %>" />
+                  <button type="submit" class="btn btn-sm btn-ghost" title="Voltar status para pendente">
+                    Desmarcar
+                  </button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,4 +1,5 @@
 <%
+  const tem = locals.tem || ((id) => !locals.recursos || locals.recursos.includes(id));
   const brl = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const nomesMes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const rotMes = (m) => { const [a, mm] = m.split('-'); return `${nomesMes[Number(mm) - 1]}/${a.slice(2)}`; };
@@ -6,6 +7,12 @@
   const tot = meses.reduce((a, m) => ({ e: a.e + m.entradas.valor, s: a.s + m.saidas.valor, eq: a.eq + m.entradas.qtd, sq: a.sq + m.saidas.qtd }), { e: 0, s: 0, eq: 0, sq: 0 });
   const anoAtual = new Date().getFullYear();
 %>
+<div class="row-actions" style="margin-bottom: 16px;">
+  <a href="<%= base %>/relatorios" class="btn btn-primary">Relatórios Fiscais</a>
+  <% if (tem('dre_gerencial')) { %><a href="<%= base %>/relatorios/dre" class="btn">📊 DRE Gerencial</a><% } %>
+  <% if (tem('auditoria_fiscal')) { %><a href="<%= base %>/relatorios/auditoria" class="btn">🛡️ Auditoria Preventiva</a><% } %>
+</div>
+
 <form method="get" action="<%= base %>/relatorios" class="filters card">
   <label class="filtro">Ano
     <select name="ano">
@@ -29,8 +36,32 @@
     </label>
   <% } %>
   <button class="btn btn-primary">Atualizar</button>
-  <a href="<%= base %>/relatorios/excel?<%= qs({}) %>" class="btn">Baixar Excel</a>
+  <a href="<%= base %>/relatorios/excel?<%= qs({}) %>" class="btn" title="Baixar relatório em planilha Excel">Baixar Excel</a>
+  <a href="<%= base %>/relatorios/fechamento?<%= qs({}) %>" class="btn btn-secondary" title="Baixar pacote ZIP completo com XMLs em pastas e relatório Excel">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+    Fechamento do Mês (ZIP)
+  </a>
+  <% if (tem('exportacao_sistemas')) { %>
+  <div class="dropdown-contabil" style="display:inline-block;position:relative;">
+    <button type="button" class="btn btn-ghost" onclick="var m = document.getElementById('menu-softwares'); m.style.display = m.style.display === 'block' ? 'none' : 'block';">
+      🔌 Exportar p/ Software Contábil ▼
+    </button>
+    <div id="menu-softwares" style="display:none;position:absolute;top:100%;left:0;background:var(--surface,#fff);box-shadow:0 10px 15px -3px rgba(0,0,0,0.2);border:1px solid var(--border,#e2e8f0);border-radius:8px;z-index:50;min-width:210px;margin-top:4px;">
+      <a href="<%= base %>/relatorios/exportar-sistema?sistema=dominio&<%= qs({}) %>" class="btn btn-ghost" style="display:block;text-align:left;border-radius:0;padding:8px 14px;border:none;">Domínio Sistemas</a>
+      <a href="<%= base %>/relatorios/exportar-sistema?sistema=questor&<%= qs({}) %>" class="btn btn-ghost" style="display:block;text-align:left;border-radius:0;padding:8px 14px;border:none;">Questor Sistemas</a>
+      <a href="<%= base %>/relatorios/exportar-sistema?sistema=alterdata&<%= qs({}) %>" class="btn btn-ghost" style="display:block;text-align:left;border-radius:0;padding:8px 14px;border:none;">Alterdata Pack</a>
+    </div>
+  </div>
+  <% } %>
 </form>
+
+<div class="card" style="padding: 12px 16px; margin-bottom: 20px; background: var(--surface-2); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+  <div>
+    <strong style="color: var(--text-heading); display: block; font-size: 0.95rem;">📦 Pacote de Fechamento do Mês em 1 Clique</strong>
+    <span class="muted small">Reúne todos os XMLs do período organizados em subpastas (<code>/Entradas</code>, <code>/Saídas</code>, <code>/Canceladas</code>, <code>/Eventos</code>) e a planilha Excel completa com resumos fiscais.</span>
+  </div>
+  <a href="<%= base %>/relatorios/fechamento?<%= qs({}) %>" class="btn btn-sm btn-primary">Baixar Pacote Completo</a>
+</div>
 
 <section class="cards totais">
   <div class="card stat"><span class="stat-label">Entradas (recebidas/tomadas)</span><span class="stat-value small-value">R$ <%= brl(tot.e) %></span><span class="muted small"><%= tot.eq %> documento(s)</span></div>

@@ -81,7 +81,7 @@
       <span class="legenda"><i class="leg leg-entrada"></i> entradas <i class="leg leg-saida"></i> saidas</span>
     </div>
     <% if (meses.length === 0) { %>
-      <p class="muted">Sem notas nos ultimos 12 meses. Clique em <strong>Capturar agora</strong> ou importe os XMLs.</p>
+      <p class="muted">Sem notas nos últimos 12 meses. Use o botão <strong>Sincronizar SEFAZ</strong> acima ou importe os XMLs.</p>
     <% } else { %>
       <div class="grafico-barras" role="img" aria-label="Entradas e saidas por mes">
         <% meses.forEach((m) => { %>
@@ -99,7 +99,7 @@
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>Captura</h2><a href="<%= base %>/captura" class="link">historico</a></div>
+    <div class="card-head"><h2>Captura SEFAZ</h2><a href="<%= base %>/captura" class="link">ver histórico</a></div>
     <% if (!empresa.certificado) { %>
       <p class="small"><span class="tag tag-warn">sem certificado</span> Sem o certificado A1 nao da para capturar.
         <% if (locals.ehAdmin) { %><a href="<%= base %>/editar" class="link">Vincular certificado</a><% } %></p>
@@ -122,7 +122,7 @@
 
 <div class="grid-2">
   <section class="card">
-    <div class="card-head"><h2>Ultimas notas</h2><a href="<%= base %>/notas" class="link">ver todas</a></div>
+    <div class="card-head"><h2>Últimas notas armazenadas</h2><a href="<%= base %>/notas" class="link">pesquisar todas</a></div>
     <% if (ultimasNotas.length === 0) { %>
       <p class="muted">Nenhuma nota ainda.</p>
     <% } else { %>

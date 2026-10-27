@@ -253,6 +253,9 @@ export function validarVenda(venda, cfg, empresa) {
     presenca,
     consumidorFinal: modelo === '65' || !dest || dest.indIEDest === '9' || venda.consumidorFinal === true || venda.consumidorFinal === 'on',
     infComplementar: textoSefaz(venda.infComplementar, 4000),
+    contingencia: Boolean(venda.contingencia),
+    xJustCont: textoSefaz(venda.xJustCont || 'Indisponibilidade tecnica momentanea da SEFAZ', 255),
+    dhCont: venda.dhCont || null,
     totais: { produtos: totalProdutos, desconto: totalDesconto, total },
   };
 }
@@ -328,21 +331,26 @@ export function montarNFe({ empresa, cfg, venda, numero, serie, ambiente, dhEmi,
   const cUF = codigoUF(uf);
   const aamm = dhEmi.slice(2, 4) + dhEmi.slice(5, 7);
   const codNum = cNF || codigoNumerico(numero);
-  const chave = montarChave({ cUF, aamm, documento: empresa.cnpj, modelo, serie, numero, tpEmis: 1, cNF: codNum });
+  const tpEmis = v.contingencia ? 9 : 1;
+  const chave = montarChave({ cUF, aamm, documento: empresa.cnpj, modelo, serie, numero, tpEmis, cNF: codNum });
   const id = `NFe${chave}`;
   const interestadual = modelo === '55' && v.dest && v.dest.uf && v.dest.uf !== uf;
   const idDest = interestadual ? '2' : '1';
   const end = empresa.endereco || {};
+  const dhCont = v.dhCont || dhEmi;
+  const xJustCont = v.xJustCont || 'Indisponibilidade tecnica momentanea da SEFAZ';
 
   const ide =
     `<ide><cUF>${cUF}</cUF><cNF>${codNum}</cNF>${t('natOp', textoSefaz(cfg.naturezaOperacao || 'Venda de mercadoria', 60))}` +
     `<mod>${modelo}</mod><serie>${Number(serie)}</serie><nNF>${numero}</nNF><dhEmi>${dhEmi}</dhEmi>` +
     (modelo === '55' ? `<dhSaiEnt>${dhEmi}</dhSaiEnt>` : '') +
     `<tpNF>1</tpNF><idDest>${idDest}</idDest><cMunFG>${soDigitos(empresa.municipioCodigo)}</cMunFG>` +
-    `<tpImp>${modelo === '65' ? '4' : '1'}</tpImp><tpEmis>1</tpEmis><cDV>${chave.slice(-1)}</cDV><tpAmb>${tpAmb}</tpAmb>` +
+    `<tpImp>${modelo === '65' ? '4' : '1'}</tpImp><tpEmis>${tpEmis}</tpEmis><cDV>${chave.slice(-1)}</cDV><tpAmb>${tpAmb}</tpAmb>` +
     `<finNFe>1</finNFe><indFinal>${v.consumidorFinal ? '1' : '0'}</indFinal><indPres>${v.presenca}</indPres>` +
     (['2', '3', '4', '9'].includes(v.presenca) ? '<indIntermed>0</indIntermed>' : '') +
-    `<procEmi>0</procEmi><verProc>${VER_PROC}</verProc></ide>`;
+    `<procEmi>0</procEmi><verProc>${VER_PROC}</verProc>` +
+    (tpEmis === 9 ? `<dhCont>${dhCont}</dhCont><xJust>${esc(xJustCont)}</xJust>` : '') +
+    `</ide>`;
 
   const emit =
     `<emit>${tagDoc(empresa.cnpj)}${t('xNome', textoSefaz(empresa.razaoSocial, 60))}${t('xFant', textoSefaz(empresa.nomeFantasia, 60))}` +

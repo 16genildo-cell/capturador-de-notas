@@ -12,6 +12,7 @@
     "admin:senha": "node src/scripts/redefinir-admin.js",
     "backup": "node src/scripts/backup.js",
     "restaurar": "node src/scripts/restaurar.js",
+    "certs:rotacionar": "node src/scripts/rotacionar-chave-certificados.js",
     "servico:instalar": "node src/scripts/servico-windows.js instalar",
     "servico:remover": "node src/scripts/servico-windows.js remover",
     "test": "node --test \"test/**/*.test.js\""

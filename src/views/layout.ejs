@@ -7,11 +7,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@700;900&display=swap" />
-  <link rel="stylesheet" href="/static/css/app.css" />
+  <link rel="stylesheet" href="/static/css/app.css?v=2.2" />
   <script>try { if (localStorage.getItem('menuRecolhido') === '1') document.documentElement.classList.add('menu-recolhido'); } catch (e) {}</script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/logo-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/img/logo-192.png" />
+  <link rel="apple-touch-icon" href="/static/img/logo-180.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="<%= locals.nomeProduto || 'Captura Total' %>" />
 </head>
 <%
-  const tem = (id) => !locals.recursos || locals.recursos.includes(id);
+  const tem = locals.tem || ((id) => !locals.recursos || locals.recursos.includes(id));
   const cp = currentPath || '/';
   const q = locals.queryAtual || {};
   const em = (prefixo) => cp === prefixo || cp.startsWith(prefixo + '/');
@@ -34,12 +42,14 @@
     usuarios: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     conta: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
     saude: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    pagamentos: '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
     suporte: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     plataforma: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
     senha: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
     sair: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
     sino: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     relogio: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    tarefas: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   };
   const icone = (nome, tam = 18) => `<svg class="ico" width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[nome] || I.notas}</svg>`;
 
@@ -51,9 +61,13 @@
 
   // Cabecalho da pagina: icone e subtitulo conforme a secao
   const secoes = [
-    ['/notas', 'notas', 'Consulte, filtre e baixe os documentos capturados'],
+    ['/notas', 'notas', 'Consulte, pesquise e exporte os documentos fiscais já armazenados no sistema'],
+    ['/captura', 'captura', 'Sincronize e capture novos documentos da SEFAZ com certificado digital A1'],
     ['/relatorios', 'relatorios', 'Entradas, saidas e totais por periodo'],
+    ['/solicitacoes', 'tarefas', 'Solicitações de documentos e tarefas entre escritório e clientes'],
     ['/importar', 'importar', 'Envie XMLs soltos ou em ZIP para o sistema'],
+    ['/vendas', 'produtos', 'Emissão de cupom fiscal (NFC-e) e NF-e para consumidor e empresas'],
+    ['/emitir', 'servicos', 'Emissão simplificada de NFS-e (serviços) pelo padrão nacional'],
     ['/empresas', 'clientes', 'Gerencie os clientes do escritorio'],
     ['/certificados', 'certificados', 'Gerencie os certificados cadastrados no sistema'],
     ['/certidoes', 'certidoes', 'Certidoes negativas dos clientes'],
@@ -61,6 +75,8 @@
     ['/assinatura', 'conta', 'Plano, cobranca e dados do escritorio'],
     ['/saude', 'saude', 'Situacao do servidor, banco e backups'],
     ['/chat', 'suporte', 'Fale com a nossa equipe'],
+    ['/plataforma/pagamentos', 'pagamentos', 'Controle mensal de mensalidades e pagamentos dos escritórios'],
+    ['/plataforma/planos', 'conta', 'Gerencie os pacotes e planos de assinatura do SaaS'],
     ['/plataforma', 'plataforma', 'Administracao da plataforma'],
     ['/minha-senha', 'senha', 'Altere a sua senha de acesso'],
   ];
@@ -83,7 +99,7 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
     </button>
     <a href="/" class="marca" aria-label="<%= produto %> - inicio">
-      <span class="marca-simbolo" aria-hidden="true"><%= produto.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() %></span>
+      <img src="/static/img/logo-64.png" srcset="/static/img/logo-64.png 1x, /static/img/logo-128.png 2x" alt="" class="marca-logo" width="32" height="32" />
       <span class="marca-nome"><%= produto %></span>
     </a>
     <div class="cabecalho-acoes">
@@ -107,33 +123,46 @@
         <%- item('Painel', '/', cp === '/', 'painel') %>
 
         <div class="nav-grupo">Documentos fiscais</div>
-        <%- item('Todas as notas', '/notas', naNota && !cat, 'notas') %>
+        <%- item('Notas armazenadas', '/notas', naNota && !cat, 'notas') %>
         <%- item('NF-e / NFC-e', '/notas?categoria=produtos', cat === 'produtos', 'produtos') %>
         <%- item('NFS-e', '/notas?categoria=servicos', cat === 'servicos', 'servicos') %>
         <%- item('CT-e', '/notas?categoria=cte', cat === 'cte', 'cte') %>
         <%- item('Eventos', '/notas?categoria=eventos', cat === 'eventos', 'eventos') %>
+        <% if (!locals.ehCliente) { %>
+          <%- item('Captura SEFAZ', '/captura', em('/captura'), 'captura') %>
+        <% } %>
         <% if (tem('relatorios')) { %><%- item('Relatórios', '/relatorios', em('/relatorios'), 'relatorios') %><% } %>
+        <% if (tem('solicitacoes_documentos')) { %><%- item('Tarefas & Documentos', '/solicitacoes', em('/solicitacoes'), 'tarefas') %><% } %>
 
         <% if (locals.ehAdmin && tem('importar_xml')) { %><%- item('Importar XML', '/importar', em('/importar'), 'importar') %><% } %>
+
+        <% if (!locals.ehCliente && (tem('emissao_nfe') || tem('emissao_nfse'))) { %>
+          <div class="nav-grupo">Emissão</div>
+          <% if (tem('emissao_nfe')) { %><%- item('Emitir Cupom / NF-e', '/vendas', em('/vendas'), 'produtos') %><% } %>
+          <% if (tem('emissao_nfse')) { %><%- item('Emitir NFS-e', '/emitir', em('/emitir'), 'servicos') %><% } %>
+        <% } %>
 
         <div class="nav-grupo">Cadastros</div>
         <%- item(locals.ehCliente ? 'Minhas empresas' : 'Clientes', '/empresas', cp === '/empresas' || cp === '/empresas/nova', 'clientes') %>
         <% if (locals.ehAdmin) { %>
           <%- item('Certificados', '/certificados', em('/certificados'), 'certificados') %>
+          <% if (tem('monitor_cnd')) { %><%- item('Certidões Negativas', '/certidoes', em('/certidoes'), 'certidoes') %><% } %>
           <%- item('Usuários', '/usuarios', em('/usuarios'), 'usuarios') %>
         <% } %>
 
         <% if (!locals.ehCliente) { %>
           <div class="nav-grupo">Configurações</div>
           <%- item('Meu escritório', '/assinatura', em('/assinatura'), 'conta') %>
-          <% if (locals.ehAdmin) { %><%- item('Saúde do sistema', '/saude', em('/saude'), 'saude') %><% } %>
           <% if (locals.ehAdmin && tem('chat_suporte')) { %><%- item('Suporte', '/chat', cp === '/chat', 'suporte', locals.chatNaoLidas) %><% } %>
         <% } %>
 
         <% if (locals.ehPlataforma) { %>
           <div class="nav-grupo">Plataforma</div>
           <%- item('Chat dos escritórios', '/plataforma/chat', em('/plataforma/chat'), 'suporte', locals.chatSuporteNaoLidas) %>
-          <%- item('Administração', '/plataforma', em('/plataforma') && !em('/plataforma/chat'), 'plataforma', locals.mensagensNovas) %>
+          <%- item('Administração', '/plataforma', em('/plataforma') && !em('/plataforma/chat') && !em('/plataforma/planos') && !em('/plataforma/pagamentos'), 'plataforma', locals.mensagensNovas) %>
+          <%- item('Controle de Pagamentos', '/plataforma/pagamentos', em('/plataforma/pagamentos'), 'pagamentos') %>
+          <%- item('Pacotes e Planos', '/plataforma/planos', em('/plataforma/planos'), 'conta') %>
+          <%- item('Saúde do sistema', '/saude', em('/saude'), 'saude') %>
         <% } %>
       </nav>
 
@@ -223,6 +252,15 @@
       fundo.addEventListener('click', fecharCelular);
       window.addEventListener('resize', function () { if (!celular()) fecharCelular(); });
     })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function (err) {
+          console.warn('[PWA] Falha ao registrar Service Worker:', err);
+        });
+      });
+    }
   </script>
 </body>
 </html>

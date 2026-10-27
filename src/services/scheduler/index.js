@@ -5,6 +5,7 @@ import { alertaDiario } from '../alertasEmail.js';
 import { emailConfigurado } from '../email.js';
 import { pushConfigurado } from '../push.js';
 import { limparArquivos } from '../retencao.js';
+import { renovarTodasVencendo } from '../certidoes/index.js';
 
 /**
  * Estado das tarefas automaticas (exibido na pagina Saude do sistema).
@@ -55,6 +56,11 @@ export function startScheduler() {
   // Armazenamento das notas conforme o plano (apaga os XMLs vencidos ou ja baixados)
   agendar('armazenamento', '20 * * * *', () =>
     limparArquivos().catch((err) => console.error('[armazenamento]', err.message)),
+  );
+
+  // Monitoramento e renovação automática de Certidões Negativas (diário às 06:00)
+  agendar('certidoes', '0 6 * * *', () =>
+    renovarTodasVencendo({ dias: 15 }).catch((err) => console.error('[certidoes] renovacao:', err.message)),
   );
 
   if (env.backup.ativo) {

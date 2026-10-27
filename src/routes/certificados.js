@@ -12,6 +12,14 @@ router.use(requireAdmin);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const nome = String(file.originalname || '').toLowerCase();
+    if (nome.endsWith('.pfx') || nome.endsWith('.p12')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Envie apenas arquivos de certificado digital (.pfx ou .p12).'));
+    }
+  },
 });
 
 router.get('/', async (req, res) => {

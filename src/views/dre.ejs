@@ -1,0 +1,151 @@
+<%
+  const brl = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (v) => (Number.isFinite(v) ? v.toFixed(1) + '%' : '0.0%');
+%>
+<div class="page-actions row-actions">
+  <a href="<%= base %>/relatorios" class="btn btn-ghost">Voltar aos Relatórios</a>
+  <% if (empresas.length > 1 && !locals.empresaAtual) { %>
+    <nav class="chips">
+      <% empresas.forEach((e) => { %>
+        <a href="<%= base %>/relatorios/dre?empresa=<%= e._id %>&ano=<%= filtros.ano %>&mes=<%= filtros.mes %>" class="chip <%= empresaSel && String(e._id) === String(empresaSel._id) ? 'active' : '' %>"><%= e.razaoSocial %></a>
+      <% }) %>
+    </nav>
+  <% } %>
+</div>
+
+<form method="get" action="<%= base %>/relatorios/dre" class="filters card">
+  <% if (empresas.length > 1 && !locals.empresaAtual) { %>
+    <label class="filtro">Cliente
+      <select name="empresa">
+        <% empresas.forEach((e) => { %>
+          <option value="<%= e._id %>" <%= empresaSel && String(e._id) === String(empresaSel._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
+        <% }) %>
+      </select>
+    </label>
+  <% } %>
+  <label class="filtro">Ano
+    <select name="ano">
+      <% const anoAtual = new Date().getFullYear(); %>
+      <% for (let a = anoAtual; a >= anoAtual - 4; a -= 1) { %>
+        <option value="<%= a %>" <%= String(filtros.ano) === String(a) ? 'selected' : '' %>><%= a %></option>
+      <% } %>
+    </select>
+  </label>
+  <label class="filtro">Mês
+    <select name="mes">
+      <option value="">Ano Completo</option>
+      <% const nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; %>
+      <% nomesMes.forEach((nm, idx) => { const val = String(idx + 1).padStart(2, '0'); %>
+        <option value="<%= val %>" <%= String(filtros.mes) === val ? 'selected' : '' %>><%= nm %></option>
+      <% }) %>
+    </select>
+  </label>
+  <button class="btn btn-primary">Calcular DRE</button>
+</form>
+
+<section class="cards totais">
+  <div class="card stat">
+    <span class="stat-label">Receita Bruta</span>
+    <span class="stat-value small-value">R$ <%= brl(dre.receitaBruta) %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Receita Líquida</span>
+    <span class="stat-value small-value">R$ <%= brl(dre.receitaLiquida) %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Lucro Bruto Estimado</span>
+    <span class="stat-value small-value" style="color: <%= dre.lucroBruto >= 0 ? '#16a34a' : '#dc2626' %>;">R$ <%= brl(dre.lucroBruto) %></span>
+    <span class="muted small">Margem: <%= pct(dre.margemBruta) %></span>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Resultado Operacional</span>
+    <span class="stat-value small-value" style="color: <%= dre.resultadoOperacional >= 0 ? '#16a34a' : '#dc2626' %>;">R$ <%= brl(dre.resultadoOperacional) %></span>
+    <span class="muted small">Margem: <%= pct(dre.margemOperacional) %></span>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Demonstrativo de Resultado do Exercício (DRE Gerencial)</h2>
+    <span class="muted small"><%= empresaSel ? empresaSel.razaoSocial : 'Empresa' %> · <%= filtros.mes ? `Competência ${filtros.mes}/${filtros.ano}` : `Exercício ${filtros.ano}` %></span>
+  </div>
+  <div class="tabela-rolagem">
+    <table class="table" style="font-size: 0.95rem;">
+      <thead>
+        <tr>
+          <th>Conta / Linha</th>
+          <th class="dir">Valor (R$)</th>
+          <th class="dir">% Receita</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="font-weight: 700; background: var(--surface-2);">
+          <td>(+) RECEITA BRUTA DE VENDAS E SERVIÇOS</td>
+          <td class="dir">R$ <%= brl(dre.receitaBruta) %></td>
+          <td class="dir">100,0%</td>
+        </tr>
+        <tr>
+          <td style="padding-left: 24px;">Venda de Produtos e Mercadorias (NF-e / NFC-e)</td>
+          <td class="dir">R$ <%= brl(dre.receitaProdutos) %></td>
+          <td class="dir"><%= pct(dre.receitaBruta > 0 ? (dre.receitaProdutos / dre.receitaBruta) * 100 : 0) %></td>
+        </tr>
+        <tr>
+          <td style="padding-left: 24px;">Prestação de Serviços (NFS-e)</td>
+          <td class="dir">R$ <%= brl(dre.receitaServicos) %></td>
+          <td class="dir"><%= pct(dre.receitaBruta > 0 ? (dre.receitaServicos / dre.receitaBruta) * 100 : 0) %></td>
+        </tr>
+
+        <tr style="color: #dc2626;">
+          <td>(-) DEDUÇÕES DA RECEITA BRUTA</td>
+          <td class="dir">(R$ <%= brl(dre.deducoes) %>)</td>
+          <td class="dir"><%= pct(dre.receitaBruta > 0 ? (dre.deducoes / dre.receitaBruta) * 100 : 0) %></td>
+        </tr>
+        <tr style="color: var(--text-muted);">
+          <td style="padding-left: 24px;">Cancelamentos e Devoluções de Vendas</td>
+          <td class="dir">(R$ <%= brl(dre.totalCancelamentos) %>)</td>
+          <td class="dir"><%= pct(dre.receitaBruta > 0 ? (dre.totalCancelamentos / dre.receitaBruta) * 100 : 0) %></td>
+        </tr>
+
+        <tr style="font-weight: 700; border-top: 2px solid var(--border); border-bottom: 2px solid var(--border);">
+          <td>(=) RECEITA OPERACIONAL LÍQUIDA</td>
+          <td class="dir">R$ <%= brl(dre.receitaLiquida) %></td>
+          <td class="dir"><%= pct(dre.receitaBruta > 0 ? (dre.receitaLiquida / dre.receitaBruta) * 100 : 0) %></td>
+        </tr>
+
+        <tr style="color: #dc2626;">
+          <td>(-) CUSTO DAS MERCADORIAS (CMV Estimado / Compras de Fornecedores)</td>
+          <td class="dir">(R$ <%= brl(dre.cmv) %>)</td>
+          <td class="dir"><%= pct(dre.receitaLiquida > 0 ? (dre.cmv / dre.receitaLiquida) * 100 : 0) %></td>
+        </tr>
+
+        <tr style="font-weight: 700; background: var(--surface-2);">
+          <td>(=) LUCRO BRUTO OPERACIONAL</td>
+          <td class="dir" style="color: <%= dre.lucroBruto >= 0 ? '#16a34a' : '#dc2626' %>;">R$ <%= brl(dre.lucroBruto) %></td>
+          <td class="dir"><%= pct(dre.margemBruta) %></td>
+        </tr>
+
+        <tr style="color: #dc2626;">
+          <td>(-) DESPESAS OPERACIONAIS CAPTURADAS</td>
+          <td class="dir">(R$ <%= brl(dre.despesasOperacionais) %>)</td>
+          <td class="dir"><%= pct(dre.receitaLiquida > 0 ? (dre.despesasOperacionais / dre.receitaLiquida) * 100 : 0) %></td>
+        </tr>
+        <tr style="color: var(--text-muted);">
+          <td style="padding-left: 24px;">Fretes sobre Compras (CT-e Tomados)</td>
+          <td class="dir">(R$ <%= brl(dre.despesaFrete) %>)</td>
+          <td class="dir"><%= pct(dre.receitaLiquida > 0 ? (dre.despesaFrete / dre.receitaLiquida) * 100 : 0) %></td>
+        </tr>
+        <tr style="color: var(--text-muted);">
+          <td style="padding-left: 24px;">Serviços Tomados de Terceiros (NFS-e Tomadas)</td>
+          <td class="dir">(R$ <%= brl(dre.despesaServicos) %>)</td>
+          <td class="dir"><%= pct(dre.receitaLiquida > 0 ? (dre.despesaServicos / dre.receitaLiquida) * 100 : 0) %></td>
+        </tr>
+
+        <tr style="font-weight: 800; font-size: 1.05rem; border-top: 3px double var(--border);">
+          <td>(=) RESULTADO OPERACIONAL ESTIMADO</td>
+          <td class="dir" style="color: <%= dre.resultadoOperacional >= 0 ? '#16a34a' : '#dc2626' %>;">R$ <%= brl(dre.resultadoOperacional) %></td>
+          <td class="dir"><%= pct(dre.margemOperacional) %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

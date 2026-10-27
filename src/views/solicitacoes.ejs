@@ -1,0 +1,170 @@
+<div class="page-actions row-actions">
+  <% if (locals.ehAdmin) { %>
+    <button type="button" class="btn btn-primary" onclick="document.getElementById('modal-nova-solicitacao').style.display='flex'">+ Nova Solicitação</button>
+  <% } %>
+</div>
+
+<form method="get" action="<%= base %>/solicitacoes" class="filters card">
+  <% if (empresas.length > 1 && !locals.empresaAtual) { %>
+    <label class="filtro">Cliente
+      <select name="empresa">
+        <option value="">Todos</option>
+        <% empresas.forEach((e) => { %>
+          <option value="<%= e._id %>" <%= String(filtros.empresa) === String(e._id) ? 'selected' : '' %>><%= e.razaoSocial %></option>
+        <% }) %>
+      </select>
+    </label>
+  <% } %>
+  <label class="filtro">Status
+    <select name="status">
+      <option value="">Todos os status</option>
+      <option value="pendente" <%= filtros.status === 'pendente' ? 'selected' : '' %>>Pendente</option>
+      <option value="enviado" <%= filtros.status === 'enviado' ? 'selected' : '' %>>Enviado pelo cliente</option>
+      <option value="aprovado" <%= filtros.status === 'aprovado' ? 'selected' : '' %>>Aprovado</option>
+      <option value="rejeitado" <%= filtros.status === 'rejeitado' ? 'selected' : '' %>>Rejeitado</option>
+    </select>
+  </label>
+  <button class="btn btn-primary">Filtrar</button>
+</form>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Solicitações de Documentos & Tarefas</h2>
+    <span class="muted small"><%= solicitacoes.length %> solicitação(ões)</span>
+  </div>
+
+  <% if (!solicitacoes.length) { %>
+    <p class="muted">Nenhuma solicitação encontrada no momento.</p>
+  <% } else { %>
+    <div class="tabela-rolagem">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Documento / Tarefa</th>
+            <th>Cliente</th>
+            <th>Prazo</th>
+            <th>Status</th>
+            <th>Arquivo Anexado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% solicitacoes.forEach((s) => { %>
+            <%
+              const tagStatus = { pendente: 'tag-warn', enviado: 'tag-nfse', aprovado: 'tag-ok', rejeitado: 'tag-err' }[s.status];
+              const txtStatus = { pendente: 'Pendente', enviado: 'Enviado', aprovado: 'Aprovado', rejeitado: 'Rejeitado' }[s.status];
+            %>
+            <tr>
+              <td>
+                <strong><%= s.titulo %></strong>
+                <% if (s.descricao) { %><div class="small muted"><%= s.descricao %></div><% } %>
+                <% if (s.observacao) { %><div class="small" style="color: #6366f1;">Obs: <%= s.observacao %></div><% } %>
+              </td>
+              <td><%= s.empresa ? s.empresa.razaoSocial : '-' %></td>
+              <td class="small nowrap">
+                <% if (s.prazo) { %>
+                  <%= new Date(s.prazo).toLocaleDateString('pt-BR') %>
+                <% } else { %>
+                  <span class="muted">Sem prazo</span>
+                <% } %>
+              </td>
+              <td><span class="tag <%= tagStatus %>"><%= txtStatus %></span></td>
+              <td class="small">
+                <% if (s.arquivo && s.arquivo.nome) { %>
+                  <a href="<%= base %>/solicitacoes/<%= s._id %>/download" class="link">
+                    📎 <%= s.arquivo.nome %>
+                  </a>
+                  <span class="muted small">(<%= Math.round((s.arquivo.tamanho || 0) / 1024) %> KB)</span>
+                <% } else { %>
+                  <span class="muted">Nenhum arquivo</span>
+                <% } %>
+              </td>
+              <td class="row-actions">
+                <% if (s.status === 'pendente' || s.status === 'rejeitado') { %>
+                  <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalUpload('<%= s._id %>', '<%= s.titulo %>')">Enviar arquivo</button>
+                <% } %>
+                <% if (locals.ehAdmin && s.status === 'enviado') { %>
+                  <form method="post" action="<%= base %>/solicitacoes/<%= s._id %>/status" class="inline">
+                    <input type="hidden" name="status" value="aprovado" />
+                    <button class="btn btn-sm btn-primary">Aprovar</button>
+                  </form>
+                  <form method="post" action="<%= base %>/solicitacoes/<%= s._id %>/status" class="inline">
+                    <input type="hidden" name="status" value="rejeitado" />
+                    <button class="btn btn-sm btn-ghost">Rejeitar</button>
+                  </form>
+                <% } %>
+                <% if (locals.ehAdmin) { %>
+                  <form method="post" action="<%= base %>/solicitacoes/<%= s._id %>/excluir" class="inline" onsubmit="return confirm('Excluir esta solicitação?')">
+                    <button class="btn btn-sm btn-danger">Excluir</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<% if (locals.ehAdmin) { %>
+<div id="modal-nova-solicitacao" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="max-width:480px;width:100%;margin:0;background:var(--surface,#fff);box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);border-radius:12px;">
+    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;">Solicitar Documento / Tarefa</h2>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('modal-nova-solicitacao').style.display='none'">✕</button>
+    </div>
+    <form method="post" action="<%= base %>/solicitacoes" class="form" style="margin-top:14px;">
+      <label>Cliente / Empresa *
+        <select name="empresa" required>
+          <% empresas.forEach((e) => { %>
+            <option value="<%= e._id %>"><%= e.razaoSocial %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>Documento solicitado *
+        <input type="text" name="titulo" required placeholder="ex.: Extrato Bancário Mensal, Folha de Ponto, Comprovante de Pagamento" />
+      </label>
+      <label>Instruções / Descrição (opcional)
+        <textarea name="descricao" rows="2" placeholder="ex.: Favor enviar o extrato em formato PDF ou OFX referente ao mês anterior."></textarea>
+      </label>
+      <label>Prazo limite de entrega (opcional)
+        <input type="date" name="prazo" />
+      </label>
+      <div class="row-actions" style="margin-top:16px;justify-content:flex-end;gap:8px;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-nova-solicitacao').style.display='none'">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Criar Solicitação</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<div id="modal-upload" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="max-width:460px;width:100%;margin:0;background:var(--surface,#fff);box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);border-radius:12px;">
+    <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;" id="upload-titulo">Enviar Arquivo</h2>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('modal-upload').style.display='none'">✕</button>
+    </div>
+    <form id="form-upload" method="post" enctype="multipart/form-data" class="form" style="margin-top:14px;">
+      <label>Selecione o arquivo (PDF, imagem, planilha, OFX, etc. até 15MB):
+        <input type="file" name="arquivo" required />
+      </label>
+      <label>Observação (opcional):
+        <input type="text" name="observacao" placeholder="ex.: Extrato atualizado da conta principal" />
+      </label>
+      <div class="row-actions" style="margin-top:16px;justify-content:flex-end;gap:8px;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-upload').style.display='none'">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Enviar Documento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function abrirModalUpload(id, titulo) {
+    document.getElementById('upload-titulo').textContent = 'Enviar: ' + titulo;
+    document.getElementById('form-upload').action = '<%= base %>/solicitacoes/' + id + '/enviar';
+    document.getElementById('modal-upload').style.display = 'flex';
+  }
+</script>

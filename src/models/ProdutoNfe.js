@@ -25,6 +25,9 @@ const produtoSchema = new mongoose.Schema(
     pTotTrib: { type: Number, default: 0 }, // % aproximado de tributos (Lei 12.741/2012)
     ativo: { type: Boolean, default: true },
     totalVendido: { type: Number, default: 0 },
+    estoque: { type: Number, default: 0 },
+    estoqueMinimo: { type: Number, default: 0 },
+    controlaEstoque: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

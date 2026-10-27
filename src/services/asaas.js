@@ -248,3 +248,52 @@ async function aplicarEvento(idEvento, corpo) {
   await conta.save();
   return `${corpo.event}:${conta.status}`;
 }
+
+/**
+ * Consulta a API do Asaas e sincroniza o status da assinatura e último pagamento.
+ * Permite ao administrador resolver atrasos ou perdas de webhook com 1 clique.
+ */
+export async function sincronizarAssinatura(conta) {
+  if (!asaasConfigurado()) throw new Error('Cobrança não configurada (ASAAS_API_KEY ausente).');
+  const subId = conta.asaas?.subscriptionId;
+  if (!subId) throw new Error('Esta conta não possui ID de assinatura vinculado ao Asaas.');
+
+  const sub = await api('GET', `/subscriptions/${subId}`);
+  const pagamentos = await api('GET', `/subscriptions/${subId}/payments?limit=10`);
+
+  const lista = (pagamentos.data || []).sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1));
+  const ultimoPago = lista.find((p) => ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(p.status));
+
+  const statusAnterior = conta.status;
+  let alterado = false;
+
+  if (ultimoPago) {
+    const fim = fimDoPeriodo(ultimoPago.dueDate || dataISO(new Date()), PLANOS[conta.plano]);
+    if (!conta.pagoAte || conta.pagoAte < fim) {
+      conta.pagoAte = fim;
+      alterado = true;
+    }
+    if (['inadimplente', 'pendente', 'teste'].includes(conta.status)) {
+      conta.status = 'ativa';
+      alterado = true;
+    }
+    conta.set('asaas.ultimoPagamentoId', ultimoPago.id);
+  } else if (sub.status === 'INACTIVE' || sub.status === 'DELETED') {
+    if (conta.status !== 'cortesia') {
+      conta.status = 'cancelada';
+      alterado = true;
+    }
+  }
+
+  if (alterado) {
+    await conta.save();
+  }
+
+  return {
+    statusAnterior,
+    statusAtual: conta.status,
+    pagoAte: conta.pagoAte,
+    subStatus: sub.status,
+    ultimoPagamento: ultimoPago ? `${ultimoPago.status} (R$ ${Number(ultimoPago.value || 0).toFixed(2)}) em ${ultimoPago.dueDate}` : 'nenhum confirmado recente',
+  };
+}

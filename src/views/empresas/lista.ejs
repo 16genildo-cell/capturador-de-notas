@@ -20,7 +20,13 @@
             <td><%= e.uf %></td>
             <td>
               <% if (e.certificado) { %>
-                <span class="tag tag-ok">vinculado</span>
+                <% if (e.certificado.vencido) { %>
+                  <span class="tag tag-err" title="Certificado VENCIDO em <%= e.certificado.validoAte ? new Date(e.certificado.validoAte).toLocaleDateString('pt-BR') : '' %>">vencido</span>
+                <% } else if (e.certificado.diasParaVencer !== null && e.certificado.diasParaVencer <= 30) { %>
+                  <span class="tag tag-warn" title="Vence em <%= e.certificado.diasParaVencer %> dia(s) (<%= e.certificado.validoAte ? new Date(e.certificado.validoAte).toLocaleDateString('pt-BR') : '' %>)">vence em <%= e.certificado.diasParaVencer %>d</span>
+                <% } else { %>
+                  <span class="tag tag-ok" title="Válido até <%= e.certificado.validoAte ? new Date(e.certificado.validoAte).toLocaleDateString('pt-BR') : '' %>">válido</span>
+                <% } %>
               <% } else { %>
                 <span class="tag tag-warn">sem certificado</span>
               <% } %>
@@ -29,7 +35,7 @@
               <a href="/empresas/<%= e._id %>" class="btn btn-sm btn-primary">Abrir</a>
               <% if (!locals.ehCliente) { %>
               <form method="post" action="/empresas/<%= e._id %>/capturar" style="display:inline">
-                <button class="btn btn-sm">Capturar agora</button>
+                <button class="btn btn-sm" title="Consultar novos documentos deste cliente na SEFAZ">Sincronizar SEFAZ</button>
               </form>
               <% } %>
               <% if (locals.ehAdmin) { %>

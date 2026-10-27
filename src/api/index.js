@@ -4,7 +4,7 @@ import { User, validarSenha, empresasPermitidas } from '../models/User.js';
 import { Dispositivo } from '../models/Dispositivo.js';
 import { PLANOS, TESTE, planosPublicos, FUNCIONALIDADES } from '../config/planos.js';
 import { obterConta, ehPlataforma } from '../middleware/assinatura.js';
-import { loginBloqueado, registrarFalhaLogin, limparFalhasLogin } from '../middleware/seguranca.js';
+import { loginBloqueado, loginBloqueadoAsync, registrarFalhaLogin, limparFalhasLogin, rateLimiter } from '../middleware/seguranca.js';
 import { criarContaNova, pedirNovaSenha, redefinirSenha } from '../services/cadastro.js';
 import { abrirSessao, renovarSessao, encerrarSessao, encerrarTodas, gerarTokenAcesso, lerTokenAcesso } from './tokens.js';
 import { contaPublica } from './util.js';
@@ -70,9 +70,11 @@ async function perfil(user) {
   };
 }
 
-api.post('/auth/login', async (req, res) => {
+const loginLimiter = rateLimiter({ janelaMs: 15 * 60 * 1000, max: 20, prefixo: 'login_api', mensagem: 'Muitas tentativas de login. Aguarde alguns instantes.' });
+
+api.post('/auth/login', loginLimiter, async (req, res) => {
   const email = String(req.body.email || '').toLowerCase().trim();
-  const minutos = loginBloqueado(req, email);
+  const minutos = await loginBloqueadoAsync(req, email);
   if (minutos) return res.status(429).json({ erro: `Muitas tentativas. Tente novamente em ${minutos} minuto(s).` });
   const user = await User.findOne({ email });
   if (!user || !user.ativo || !(await user.verificarSenha(String(req.body.senha || '')))) {

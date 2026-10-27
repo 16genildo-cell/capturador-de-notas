@@ -8,6 +8,29 @@
   const rotTipo = { nfe: 'NF-e', nfce: 'NFC-e', nfse: 'NFS-e', cte: 'CT-e', evento: 'Evento' };
 %>
 
+<!-- Informativo de separacao clara entre Notas Armazenadas vs Captura SEFAZ -->
+<div class="card card-destaque-notas" style="background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(30,41,59,0.25)); border-left: 4px solid var(--primary); padding: 14px 18px; margin-bottom: 16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+    <div>
+      <div style="font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+        <span>Notas Armazenadas no Sistema</span>
+      </div>
+      <p class="muted small" style="margin:4px 0 0 0;">
+        Você está pesquisando os documentos fiscais <strong>já salvos no banco de dados local</strong>. A busca é instantânea e não consome o limite de consultas da SEFAZ.
+      </p>
+    </div>
+    <% if (!locals.ehCliente) { %>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <a href="/captura" class="btn btn-sm btn-outline" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;" title="Abrir a Central de Captura para sincronizar e baixar novas notas da SEFAZ">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          Central de Captura SEFAZ →
+        </a>
+      </div>
+    <% } %>
+  </div>
+</div>
+
 <!-- Atalhos de categoria -->
 <nav class="chips">
   <a href="<%= base %>/notas?<%= qs({ categoria: '', page: '' }) %>" class="chip <%= !filtros.categoria ? 'active' : '' %>">Todas</a>
@@ -22,19 +45,28 @@
 <form method="get" action="<%= base %>/notas" class="filters card" id="form-filtros">
   <input type="hidden" name="categoria" value="<%= filtros.categoria %>" />
   <input type="hidden" name="mes" value="<%= filtros.mes %>" id="campo-mes" />
+  
+  <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:4px;">
+    <span style="font-weight:600; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Filtrar notas armazenadas
+    </span>
+    <span class="muted small">Busca no banco de dados local</span>
+  </div>
+
   <% if (locals.usaCertificado) { %>
     <div class="filtro filtro-cliente filtro-certificado">
       <label for="filtro-certificado">Certificado</label>
       <% if (certificados.length) { %>
         <select name="certificado" id="filtro-certificado" data-seletor-cliente data-placeholder="Digite pelo menos 3 letras do certificado ou o CNPJ/CPF">
-          <option value="">Nenhum (só as notas já capturadas)</option>
+          <option value="">Todos os certificados</option>
           <% certificados.forEach((c) => { %>
             <option value="<%= c._id %>" data-doc="<%= c.doc %><%= c.vencido ? ' · vencido' : '' %>" <%= filtros.certificado === String(c._id) ? 'selected' : '' %>><%= c.apelido %></option>
           <% }) %>
         </select>
-        <span class="filtro-dica">Com um certificado escolhido, o Filtrar busca as notas novas na SEFAZ e no Ambiente Nacional.</span>
+        <span class="filtro-dica">Filtra no banco de dados as notas das empresas deste certificado.</span>
       <% } else { %>
-        <a href="/certificados/novo" class="btn">Enviar certificado A1</a>
+        <a href="/certificados/novo" class="btn btn-sm">Enviar certificado A1</a>
       <% } %>
     </div>
   <% } %>
@@ -50,9 +82,9 @@
       </select>
     </div>
   <% } %>
-  <input type="text" name="q" value="<%= filtros.q %>" placeholder="Nome, CPF/CNPJ, numero ou chave..." />
+  <input type="text" name="q" value="<%= filtros.q %>" placeholder="Nome, CPF/CNPJ, número ou chave..." style="min-width:230px;" />
 
-  <label class="filtro">Mes
+  <label class="filtro">Mês
     <select id="sel-mes">
       <option value="">Todos</option>
       <% mesesNomes.forEach((m, i) => { %>
@@ -69,28 +101,46 @@
     </select>
   </label>
   <label class="filtro">De <input type="date" name="de" value="<%= filtros.de %>" /></label>
-  <label class="filtro">Ate <input type="date" name="ate" value="<%= filtros.ate %>" /></label>
+  <label class="filtro">Até <input type="date" name="ate" value="<%= filtros.ate %>" /></label>
 
   <label class="filtro">Papel
     <select name="papel">
       <option value="">Todas</option>
       <option value="tomadas" <%= filtros.papel === 'tomadas' ? 'selected' : '' %>>Tomadas / recebidas (entrada)</option>
-      <option value="prestadas" <%= filtros.papel === 'prestadas' ? 'selected' : '' %>>Prestadas / emitidas (saida)</option>
+      <option value="prestadas" <%= filtros.papel === 'prestadas' ? 'selected' : '' %>>Prestadas / emitidas (saída)</option>
     </select>
   </label>
-  <label class="filtro">Situacao
+  <label class="filtro">Situação
     <select name="situacao">
       <option value="">Todas</option>
-      <option value="ativas" <%= filtros.situacao === 'ativas' ? 'selected' : '' %>>Nao canceladas</option>
+      <option value="ativas" <%= filtros.situacao === 'ativas' ? 'selected' : '' %>>Não canceladas</option>
       <option value="canceladas" <%= filtros.situacao === 'canceladas' ? 'selected' : '' %>>Canceladas</option>
       <option value="completas" <%= filtros.situacao === 'completas' ? 'selected' : '' %>>Com XML completo</option>
-      <option value="resumo" <%= filtros.situacao === 'resumo' ? 'selected' : '' %>>So resumo</option>
-      <option value="manifestar" <%= filtros.situacao === 'manifestar' ? 'selected' : '' %>>Aguardando manifestacao</option>
+      <option value="resumo" <%= filtros.situacao === 'resumo' ? 'selected' : '' %>>Só resumo</option>
+      <option value="manifestar" <%= filtros.situacao === 'manifestar' ? 'selected' : '' %>>Aguardando manifestação</option>
     </select>
   </label>
+  
   <input type="hidden" name="buscar" id="campo-buscar" value="" />
-  <button class="btn btn-primary" id="btn-filtrar">Filtrar</button>
-  <a href="<%= base %>/notas" class="btn btn-ghost">Limpar</a>
+
+  <div class="filtros-acoes-linha" style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:10px; flex-wrap:wrap; margin-top:8px; padding-top:10px; border-top:1px solid var(--border);">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button type="submit" class="btn btn-primary" id="btn-filtrar" title="Pesquisa as notas já armazenadas no sistema (banco de dados)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Filtrar notas salvas
+      </button>
+      <a href="<%= base %>/notas" class="btn btn-ghost">Limpar filtros</a>
+    </div>
+
+    <% if (!locals.ehCliente) { %>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button type="submit" id="btn-buscar-sefaz" class="btn btn-outline" style="border-color:#3b82f6; color:#3b82f6; font-weight:600;" title="Conecta online à SEFAZ via certificado digital A1 para baixar novas notas emitidas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-right:4px;"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span>⚡ Buscar novas na SEFAZ</span>
+        </button>
+      </div>
+    <% } %>
+  </div>
 </form>
 
 <script>
@@ -98,15 +148,20 @@
   (function () {
     var form = document.getElementById('form-filtros');
     form.addEventListener('submit', function (ev) {
-      // Filtrar com certificado escolhido: busca as notas novas na Receita antes de listar
-      var cert = document.getElementById('filtro-certificado');
-      var btn = document.getElementById('btn-filtrar');
-      if (cert && cert.value && ev.submitter === btn) {
-        document.getElementById('campo-buscar').value = '1';
-        btn.disabled = true;
-        btn.classList.add('btn-buscando');
-        btn.textContent = 'Buscando na Receita...';
+      var btnSefaz = document.getElementById('btn-buscar-sefaz');
+      var campoBuscar = document.getElementById('campo-buscar');
+      var btnFiltrar = document.getElementById('btn-filtrar');
+
+      // Se clicou explicitamente em "Buscar novas na SEFAZ"
+      if (btnSefaz && ev.submitter === btnSefaz) {
+        campoBuscar.value = '1';
+        btnSefaz.disabled = true;
+        btnSefaz.classList.add('btn-buscando');
+        btnSefaz.textContent = 'Consultando SEFAZ...';
+      } else {
+        campoBuscar.value = '';
       }
+
       var m = document.getElementById('sel-mes').value;
       var a = document.getElementById('sel-ano');
       var campoMes = document.getElementById('campo-mes');
@@ -117,9 +172,9 @@
       } else {
         campoMes.value = '';
       }
-      // nao envia campos vazios (URL mais limpa)
+      // nao envia campos vazios (URL mais limpa), exceto campoBuscar quando ativado
       Array.prototype.forEach.call(form.elements, function (el) {
-        if (el.name && !el.value) el.disabled = true;
+        if (el.name && !el.value && el !== campoBuscar) el.disabled = true;
       });
     });
   })();

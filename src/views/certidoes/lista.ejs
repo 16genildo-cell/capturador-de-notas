@@ -12,6 +12,15 @@
   </div>
 <% } %>
 
+<div class="page-actions row-actions" style="margin-bottom: 14px; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+  <div>
+    <span class="muted small">Monitoramento e emissão de Certidões Negativas (Trabalhista, Federal via A1 e FGTS)</span>
+  </div>
+  <form method="post" action="/certidoes/varredura" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Verificando certidões...'">
+    <button class="btn btn-primary">⚡ Varredura Automática de CNDs</button>
+  </form>
+</div>
+
 <section class="card">
   <div class="card-head"><h2>Situacao atual</h2></div>
   <% if (linhas.length === 0) { %>
@@ -27,7 +36,12 @@
           <tr>
             <td>
               <strong><%= l.razaoSocial %></strong><br><span class="muted small"><%= l.documento %> · <%= l.uf %></span>
-              <details class="links-cert">
+              <div style="margin-top: 6px; display: flex; gap: 6px; align-items: center;">
+                <form method="post" action="/certidoes/emitir-todas/<%= l._id %>" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Emitindo...'">
+                  <button class="btn btn-sm btn-ghost" style="padding: 3px 8px; font-size: 0.78rem;" title="Emite CNDT, Federal e FGTS automaticamente">⚡ Emitir Todas</button>
+                </form>
+              </div>
+              <details class="links-cert" style="margin-top: 4px;">
                 <summary class="small link">links estadual/municipal</summary>
                 <form method="post" action="/certidoes/links/<%= l._id %>" class="form form-mini">
                   <input type="url" name="estadual" value="<%= (l.linksCertidao && l.linksCertidao.estadual) || '' %>" placeholder="Site da certidao estadual (SEFAZ <%= l.uf %>)" />
@@ -42,20 +56,35 @@
                   <span class="muted small">nao se aplica a pessoa fisica</span>
                 <% } else { %>
                   <% if (c) { %>
-                    <span class="tag <%= tagSit[c.situacao] %>"><%= SITUACOES[c.situacao] %></span>
+                    <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                      <span class="tag <%= tagSit[c.situacao] %>"><%= SITUACOES[c.situacao] %></span>
+                      <% if (c.origem === 'gratuita') { %>
+                        <span class="tag tag-ok small" title="Emitida de forma automatizada">Automática</span>
+                      <% } else if (c.origem === 'serpro') { %>
+                        <span class="tag tag-nfse small" title="Emitida via API Serpro">Serpro</span>
+                      <% } %>
+                    </div>
                     <% if (c.situacao !== 'nao_emitida') { %>
                       <div class="small"><span class="tag <%= tagStatus[c.status] %>"><%= txtStatus[c.status] %></span> ate <%= fmt(c.dataValidade) %></div>
                     <% } else if (c.mensagem) { %>
                       <div class="small muted"><%= c.mensagem %></div>
                     <% } %>
-                    <% if (c.temPdf) { %><a href="/certidoes/<%= c._id %>/pdf" target="_blank" class="link small">ver PDF</a><% } %>
+                    <% if (c.temPdf) { %><a href="/certidoes/<%= c._id %>/pdf" target="_blank" class="link small">📎 ver PDF</a><% } %>
                   <% } else { %>
                     <span class="muted small">nenhuma</span>
                   <% } %>
-                  <div class="acoes-cert">
-                    <% if (esfera === 'federal' && serpro) { %>
+                  <div class="acoes-cert" style="margin-top: 6px;">
+                    <% if (esfera === 'federal') { %>
                       <form method="post" action="/certidoes/federal/<%= l._id %>" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Emitindo...'">
-                        <button class="btn btn-sm btn-primary">Emitir agora</button>
+                        <button class="btn btn-sm btn-primary"><%= serpro ? 'Emitir (Serpro)' : 'Emitir Federal' %></button>
+                      </form>
+                    <% } else if (esfera === 'trabalhista') { %>
+                      <form method="post" action="/certidoes/emitir/<%= l._id %>/trabalhista" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Emitindo...'">
+                        <button class="btn btn-sm btn-primary">Emitir CNDT</button>
+                      </form>
+                    <% } else if (esfera === 'fgts' && !l.pf) { %>
+                      <form method="post" action="/certidoes/emitir/<%= l._id %>/fgts" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Emitindo...'">
+                        <button class="btn btn-sm btn-primary">Emitir CRF</button>
                       </form>
                     <% } else if (l.links[esfera]) { %>
                       <a href="<%= l.links[esfera] %>" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">Emitir no site</a>

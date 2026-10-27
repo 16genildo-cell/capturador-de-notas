@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cupom <%= emissao.numero %></title>
+  <style>
+    @page { size: 80mm auto; margin: 0; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.25;
+      margin: 0;
+      padding: 8px 10px;
+      color: #000;
+      width: 76mm;
+      box-sizing: border-box;
+    }
+    .c { text-align: center; }
+    .r { text-align: right; }
+    .b { font-weight: bold; }
+    .div { border-top: 1px dashed #000; margin: 6px 0; }
+    .table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+    .table th, .table td { font-size: 10px; padding: 2px 0; }
+    .alerta-cont {
+      border: 2px solid #000;
+      padding: 6px;
+      margin: 6px 0;
+      font-weight: bold;
+      text-align: center;
+      font-size: 11px;
+    }
+    @media print {
+      body { width: 100%; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="c b" style="font-size: 13px;"><%= emissao.empresa ? emissao.empresa.razaoSocial : 'EMPRESA' %></div>
+  <div class="c">CNPJ: <%= emissao.empresa ? emissao.empresa.cnpj : '' %></div>
+  <div class="c"><%= emissao.empresa && emissao.empresa.endereco ? `${emissao.empresa.endereco.logradouro || ''}, ${emissao.empresa.endereco.numero || ''}` : '' %></div>
+  
+  <div class="div"></div>
+  <div class="c b">DANFE NFC-e - Documento Auxiliar</div>
+  <div class="c b">da Nota Fiscal de Consumidor Eletrônica</div>
+  <% if (emissao.status === 'contingencia') { %>
+    <div class="alerta-cont">EMITIDA EM CONTINGÊNCIA OFFLINE<br>Pendente de autorização</div>
+  <% } %>
+  <div class="div"></div>
+
+  <table class="table">
+    <thead>
+      <tr style="border-bottom: 1px solid #000;">
+        <th align="left">Item / Descrição</th>
+        <th align="right">Qtd x Unit</th>
+        <th align="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% (emissao.dados?.itens || []).forEach((item, idx) => { %>
+        <tr>
+          <td colspan="3" class="b"><%= idx + 1 %>) <%= item.descricao || ('Item ' + (idx + 1)) %></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td align="right"><%= Number(item.quantidade || 1).toFixed(2) %> x <%= Number(item.valorUnitario || 0).toFixed(2) %></td>
+          <td align="right" class="b">R$ <%= (Number(item.quantidade || 1) * Number(item.valorUnitario || 0) - Number(item.desconto || 0)).toFixed(2) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <div class="div"></div>
+  <div style="display:flex;justify-content:space-between;" class="b">
+    <span>Qtd. Total de Itens:</span>
+    <span><%= emissao.qtdItens || (emissao.dados?.itens || []).length %></span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:13px;" class="b">
+    <span>VALOR TOTAL R$:</span>
+    <span><%= Number(emissao.valor || 0).toFixed(2) %></span>
+  </div>
+  <div class="div"></div>
+
+  <div class="c">Número: <%= emissao.numero %> · Série: <%= emissao.serie %></div>
+  <div class="c">Emissão: <%= new Date(emissao.createdAt).toLocaleString('pt-BR') %></div>
+  <div class="c b" style="margin-top: 4px;">CHAVE DE ACESSO:</div>
+  <div class="c" style="word-break: break-all; font-size: 9px;"><%= (emissao.chave || '').replace(/(\d{4})(?=\d)/g, '$1 ') %></div>
+
+  <% if (emissao.protocolo) { %>
+    <div class="c" style="margin-top: 4px;">Protocolo: <%= emissao.protocolo %></div>
+  <% } %>
+
+  <div class="div"></div>
+  <div class="c" style="font-size: 9px;">Consulte pela Chave de Acesso em:<br>https://www.fazenda.gov.br</div>
+  <div class="div"></div>
+  <div class="c" style="margin-top: 10px;">Captura Total · Sistema Fiscal</div>
+</body>
+</html>

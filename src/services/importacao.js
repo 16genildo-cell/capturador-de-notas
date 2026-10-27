@@ -11,6 +11,8 @@ import { soDigitos } from '../utils/documento.js';
  * captura, como as notas de VENDA emitidas pela propria empresa.
  */
 const LIMITE_ARQUIVOS = 5000;
+const LIMITE_TAMANHO_XML = 10 * 1024 * 1024; // 10 MB por arquivo
+const LIMITE_TOTAL_DESCOMPACTADO = 100 * 1024 * 1024; // 100 MB total (protecao contra zip bomb)
 
 function doc(p) {
   return p ? soDigitos(p.CNPJ || p.CPF || '') : '';
@@ -18,11 +20,15 @@ function doc(p) {
 
 /** Identifica o tipo do XML e os CNPJ/CPF envolvidos (para achar a empresa). */
 export function identificarXml(xml) {
+  if (typeof xml === 'string' && (/<!ENTITY/i.test(xml) || /<!DOCTYPE/i.test(xml))) {
+    return { tipo: null, motivo: 'XML rejeitado por conter declarações DTD/ENTITY não permitidas' };
+  }
+
   let obj;
   try {
     obj = xmlToObj(xml);
-  } catch {
-    return { tipo: null, motivo: 'XML invalido' };
+  } catch (err) {
+    return { tipo: null, motivo: err.message || 'XML invalido' };
   }
 
   const nfe = obj?.nfeProc?.NFe || obj?.NFe;
@@ -82,8 +88,19 @@ export function escolherEmpresa(empresas, docs) {
 /** Extrai os XMLs de uma lista de arquivos enviados (xml soltos e zips, inclusive zip dentro de zip). */
 export function extrairXmls(arquivos) {
   const saida = [];
+  let totalBytes = 0;
+
   const visitar = (nome, buf, nivel = 0) => {
     if (saida.length >= LIMITE_ARQUIVOS) return;
+    if (totalBytes > LIMITE_TOTAL_DESCOMPACTADO) {
+      saida.push({ nome, erro: 'Limite total de descompactação excedido (possível Zip Bomb)' });
+      return;
+    }
+    if (buf.length > LIMITE_TAMANHO_XML) {
+      saida.push({ nome, erro: 'Arquivo individual excede o limite de 10 MB' });
+      return;
+    }
+
     if (/\.zip$/i.test(nome) || (buf[0] === 0x50 && buf[1] === 0x4b)) {
       if (nivel > 2) return;
       let zip;
@@ -96,7 +113,9 @@ export function extrairXmls(arquivos) {
       for (const entrada of zip.getEntries()) {
         if (entrada.isDirectory) continue;
         if (!/\.(xml|zip)$/i.test(entrada.entryName)) continue;
-        visitar(`${nome}/${entrada.entryName}`, entrada.getData(), nivel + 1);
+        const dados = entrada.getData();
+        totalBytes += dados.length;
+        visitar(`${nome}/${entrada.entryName}`, dados, nivel + 1);
       }
       return;
     }
